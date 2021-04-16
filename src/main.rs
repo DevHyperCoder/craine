@@ -15,7 +15,7 @@ fn main() {
     let a = extract(dom_tree.unwrap().children);
 
     for i in a {
-        print!("{}",i);
+        print!("{}", i);
     }
 }
 
@@ -38,15 +38,25 @@ fn extract(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
 
                 // add id
                 match element.id {
-                    None => {},
+                    None => {}
                     Some(id) => {
                         output.push(format!("id=\"{}\"", id));
                     }
                 }
 
-                // TODO add support for non-value stuff as well
+                // add attributes. 
+                // type = "input"
+                // OR
+                // readonly
                 for i in element.attributes {
-                    output.push(format!("{}=\"{:?}\"", i.0, i.1));
+                    output.push(match i.1 {
+                        Some(attrname) => {
+                            format!("{}=\"{}\" ", i.0, attrname)
+                        }
+                        None => {
+                            format!("{} ", i.0)
+                        }
+                    });
                 }
 
                 // for self closing tags
@@ -58,8 +68,8 @@ fn extract(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
                 output.push(">".to_string());
 
                 // Recursive child extraction
-                    let mut ex =extract(element.children); 
-                    output.append(&mut ex);
+                let mut ex = extract(element.children);
+                output.append(&mut ex);
 
                 output.push(format!("</{}>", element.name));
             }
