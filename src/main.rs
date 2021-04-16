@@ -12,60 +12,66 @@ fn main() {
 
     let dom_tree = Dom::parse(html);
 
-    extract(dom_tree.unwrap().children);
+    let a = extract(dom_tree.unwrap().children);
+
+    for i in a {
+        print!("{}",i);
+    }
 }
 
 // Recursive function to go through the DOM tree and printout a basic structure
-fn extract(dom_tree: Vec<html_parser::Node>) {
+fn extract(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
+    let mut output = vec![];
     for i in dom_tree {
         match i {
             Element(element) => {
-                println!("<{} ", element.name);
+                output.push(format!("<{} ", element.name));
 
                 // add classes
-                if element.classes.len() > 0 {
-                    print!("class=\"");
+                if !element.classes.is_empty() {
+                    output.push("class=\"".to_string());
                     for i in element.classes {
-                        print!("{} ", i);
+                        output.push(format!("{} ", i));
                     }
-                    print!("\"");
+                    output.push("\"".to_string());
                 }
 
                 // add id
                 match element.id {
                     None => {},
                     Some(id) => {
-                        println!("id=\"{}\"", id);
+                        output.push(format!("id=\"{}\"", id));
                     }
                 }
 
                 // TODO add support for non-value stuff as well
                 for i in element.attributes {
-                    println!("{}=\"{:?}\"", i.0, i.1);
+                    output.push(format!("{}=\"{:?}\"", i.0, i.1));
                 }
 
                 // for self closing tags
                 if element.variant == html_parser::ElementVariant::Void {
-                    println!("/>");
+                    output.push("/>".to_string());
                     continue;
                 }
 
-                println!(">");
+                output.push(">".to_string());
 
                 // Recursive child extraction
-                if element.children.len() > 0 {
-                    extract(element.children)
-                }
+                    let mut ex =extract(element.children); 
+                    output.append(&mut ex);
 
-                println!("</{}>", element.name)
+                output.push(format!("</{}>", element.name));
             }
+
             Text(text) => {
-                println!("{}", text);
+                output.push(text);
             }
 
             Comment(_) => {
-                println!("comment");
+                //println!("comment");
             }
         }
     }
+    output
 }
