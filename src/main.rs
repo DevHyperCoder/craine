@@ -36,6 +36,24 @@ Path: {:?}
     imports
 }
 
+fn get_pages_components_list(work_dir:PathBuf) -> (Vec<PathBuf>,Vec<PathBuf>) {
+    let mut pages_vec = vec![];
+    let mut components_vec = vec![];
+
+    for i in fs::read_dir(work_dir).expect("[work_dir] Can not read contents of directroy") {
+        let path = i.unwrap().path();
+        let filename = path.file_stem().expect("[work_dir] Can not parse filename").to_str().unwrap();
+
+        if filename.chars().next().expect("[work_dir] Can not parse file name").is_uppercase() {
+            components_vec.push(path);
+        } else {
+            pages_vec.push(path);
+        }
+    }
+
+    (pages_vec,components_vec)
+}
+
 fn get_work_dir() -> Option<PathBuf> {
     let i: Vec<String> = env::args().collect();
 
@@ -50,17 +68,13 @@ fn get_work_dir() -> Option<PathBuf> {
 
 fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
+    let pages_components = get_pages_components_list(work_dir);
 
-    for i in fs::read_dir(work_dir).expect("[work_dir] Can not read contents of directroy") {
-        let path = i.unwrap().path();
-        let filename = path.file_stem().expect("[work_dir] Can not parse filename").to_str().unwrap();
+    let pages = &pages_components.0;
+    let components = &pages_components.1;
 
-        if filename.chars().next().expect("[work_dir] Can not parse file name").is_uppercase() {
-            println!("Component: {}", path.to_str().expect("[work_dir]Contains non-unicode characters in file name"));
-        } else {
-            println!("Page: {}", path.to_str().expect("[work_dir]Contains non-unicode characters in file name"));
-        }
-    }
+    println!("{:?}",pages);
+    println!("{:?}",components);
 
     println!("{:?}", parse_import(vec!["import /bin/login".to_string(),]));
 
