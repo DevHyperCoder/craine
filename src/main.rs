@@ -4,17 +4,20 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-fn parse_import(content: Vec<String>) -> Vec<PathBuf> {
+// Currently muts the var
+fn parse_import(content: &mut Vec<String>) -> Vec<PathBuf> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
     let mut imports = vec![];
 
-    for i in content {
+    let mut import_line = vec![];
+
+    for (index,i) in content.iter().enumerate() {
         match regex.captures(&i) {
             Some(captures) => {
                 let file_path = captures.get(1).map_or("", |m| m.as_str());
 
-                let path = PathBuf::from(file_path);
+                let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
                 if !path.exists() {
                     panic!(
                         r#"
@@ -26,11 +29,17 @@ Path: {:?}
                 }
 
                 imports.push(path);
+                import_line.push(index);
             }
             None => {
-                panic!("[import] Error parsing import statement");
+
+                //panic!("[import] {} Error parsing import statement",i);
             }
         }
+    }
+
+    for i in import_line {
+        content.remove(i);
     }
 
     imports
@@ -40,7 +49,9 @@ fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>) 
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
-    for i in fs::read_dir(work_dir).expect("[work_dir] Can not read contents of directroy") {
+    println!("{:?}", work_dir);
+
+    for i in fs::read_dir(".").expect("[work_dir] Can not read contents of directroy") {
         let path = i.unwrap().path();
         let filename = path
             .file_stem()
@@ -96,6 +107,8 @@ fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
 
 fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
+    std::env::set_current_dir(&work_dir).expect("Can not set working dir");
+
     let pages_components = get_pages_components_list(work_dir);
 
     let pages = &pages_components.0;
@@ -105,15 +118,8 @@ fn main() {
     println!("{:?}", components);
 
     for page in pages {
-        let contents =
-            read_file_to_lines(page.to_path_buf()).expect("Can not open file for reading");
-
-        for line in contents {
-            println!("{}", line);
-        }
+        handler(page);
     }
-
-    println!("{:?}", parse_import(vec!["import /bin/login".to_string(),]));
 
     let html = r#"
     <p class="t-2 w-100"> lorem ipsum </p>
@@ -132,6 +138,25 @@ fn main() {
         print!("{}", i);
     }
 }
+
+fn handler(path:&PathBuf) {
+        let mut  contents =
+            read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
+
+        for import in parse_import(&mut contents) {
+            handler(&import);
+        }
+
+        let dom_tree = Dom::parse(&contents.join("\n"));
+
+let parse = extract(dom_tree.unwrap().children);
+        for line in parse {
+            println!("{}", line);
+        }
+
+        println!("\n\n-----------------------------------------\n\n")
+}
+
 
 // Recursive function to go through the DOM tree and printout a basic structure
 fn extract(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
