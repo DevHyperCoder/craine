@@ -75,6 +75,25 @@ fn get_work_dir() -> Option<PathBuf> {
     Some(work_dir)
 }
 
+fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
+    match fs::File::open(path) {
+        Ok(file) => {
+            let buf_reader = std::io::BufReader::new(file);
+            use std::io::prelude::*;
+            let line_vec: Vec<_> = buf_reader.lines().collect();
+
+            let mut string_vec: Vec<String> = vec![];
+
+            for i in line_vec {
+                string_vec.push(i.unwrap() as String);
+            }
+
+            return Some(string_vec);
+        }
+        Err(_) => None,
+    }
+}
+
 fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     let pages_components = get_pages_components_list(work_dir);
@@ -84,6 +103,15 @@ fn main() {
 
     println!("{:?}", pages);
     println!("{:?}", components);
+
+    for page in pages {
+        let contents =
+            read_file_to_lines(page.to_path_buf()).expect("Can not open file for reading");
+
+        for line in contents {
+            println!("{}", line);
+        }
+    }
 
     println!("{:?}", parse_import(vec!["import /bin/login".to_string(),]));
 
