@@ -1,6 +1,43 @@
 use html_parser::{Dom, Node::*};
+use regex::Regex;
+use std::path::PathBuf;
+
+// TODO error parsing
+fn parse_import(content: Vec<String>) -> Vec<PathBuf> {
+    let regex = Regex::new("import\\s+(\\S+)").unwrap();
+
+    let mut imports = vec![];
+
+    for i in content {
+        match regex.captures(&i) {
+            Some(captures) => {
+                let file_path = captures.get(1).map_or("", |m| m.as_str());
+
+                let path = PathBuf::from(file_path);
+                if !path.exists() {
+                    panic!(
+                        r#"
+[import] Can not find file/directory
+Path: {:?}
+                           "#,
+                        path
+                    );
+                }
+
+                imports.push(path);
+            }
+            None => {
+                panic!("[import] Error parsing import statement");
+            }
+        }
+    }
+
+    imports
+}
 
 fn main() {
+    println!("{:?}", parse_import(vec!["import /bin/login".to_string(),]));
+
     let html = r#"
     <p class="t-2 w-100"> lorem ipsum </p>
     <br/>
@@ -44,7 +81,7 @@ fn extract(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
                     }
                 }
 
-                // add attributes. 
+                // add attributes.
                 // type = "input"
                 // OR
                 // readonly

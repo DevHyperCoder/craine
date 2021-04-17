@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 html_parser = "0.6.0"
+regex = "1.4.5"
