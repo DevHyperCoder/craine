@@ -1,8 +1,9 @@
 use html_parser::{Dom, Node::*};
 use regex::Regex;
+use std::env;
+use std::fs;
 use std::path::PathBuf;
 
-// TODO error parsing
 fn parse_import(content: Vec<String>) -> Vec<PathBuf> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
@@ -35,7 +36,32 @@ Path: {:?}
     imports
 }
 
+fn get_work_dir() -> Option<PathBuf> {
+    let i: Vec<String> = env::args().collect();
+
+    let work_dir = PathBuf::from(&i[1]);
+
+    if !work_dir.is_dir() {
+        return None;
+    }
+
+    Some(work_dir)
+}
+
 fn main() {
+    let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
+
+    for i in fs::read_dir(work_dir).expect("[work_dir] Can not read contents of directroy") {
+        let path = i.unwrap().path();
+        let filename = path.file_stem().expect("[work_dir] Can not parse filename").to_str().unwrap();
+
+        if filename.chars().next().expect("[work_dir] Can not parse file name").is_uppercase() {
+            println!("Component: {}", path.to_str().expect("[work_dir]Contains non-unicode characters in file name"));
+        } else {
+            println!("Page: {}", path.to_str().expect("[work_dir]Contains non-unicode characters in file name"));
+        }
+    }
+
     println!("{:?}", parse_import(vec!["import /bin/login".to_string(),]));
 
     let html = r#"
