@@ -56,7 +56,12 @@ fn main() {
     for page in pages {
         let page_hash = handler(page);
 
-        println!("{:#?}", replace_dom(page_hash.0.to_vec(), &page_hash.1));
+        let final_dom = replace_dom(page_hash.0.to_vec(), &page_hash.1);
+        println!("{:#?}", final_dom);
+        let html = dom_tree_to_html(final_dom);
+        for i in html {
+            println!("{}", i);
+        }
     }
 }
 
@@ -85,13 +90,9 @@ fn handler(
     (dom_tree.children.clone(), hashmap)
 }
 
-//
 // Go through the dom_tree.
 // make new dometree
 // append the recursive output to the .children of the current element.
-//
-//
-//
 fn replace_dom(
     dom_tree: Vec<html_parser::Node>,
     map: &HashMap<String, Vec<html_parser::Node>>,
@@ -102,6 +103,10 @@ fn replace_dom(
         match i {
             Element(mut element) => {
                 if map.contains_key(&element.name) {
+                    // TODO more docs
+                    element.children = map.get(&element.name).unwrap().to_vec();
+                    element.variant = html_parser::ElementVariant::Normal;
+                    element.name = "div".to_string();
                     println!("Detected component");
                 }
 
