@@ -1,5 +1,6 @@
-use html_parser::{Dom, Node::*};
+use html_parser::Dom;
 use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -43,7 +44,6 @@ Path: {:?}
     imports
 }
 
-
 fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
@@ -53,25 +53,30 @@ fn main() {
     let pages = &pages_components.0;
 
     for page in pages {
-        handler(page);
+        let page_hash = handler(page);
+        println!("{:#?}", page_hash);
     }
 }
 
-fn handler(path: &PathBuf) {
+fn handler(path: &PathBuf) -> HashMap<String, Vec<html_parser::Node>> {
+    let mut hashmap = HashMap::new();
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
-
     for import in parse_import(&mut contents) {
-        handler(&import);
+        let returned_hash = handler(&import);
+        for key in returned_hash {
+            let a = key.0;
+            hashmap.entry(a.to_owned()).or_insert(key.1);
+        }
     }
 
+    // TODO error handling when dom is None
     let dom_tree = Dom::parse(&contents.join("\n"));
 
-    let parse = dom_tree_to_html(dom_tree.unwrap().children);
-    for line in parse {
-        println!("{}", line);
-    }
+    hashmap.insert(
+        path.to_path_buf().to_str().unwrap().to_owned(),
+        dom_tree.unwrap().children,
+    );
 
-    println!("\n\n-----------------------------------------\n\n")
+    hashmap
 }
-

@@ -1,9 +1,9 @@
+use html_parser::Node::*;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
-use std::io::BufReader;
 use std::io::prelude::*;
-use html_parser::Node::*;
+use std::io::BufReader;
+use std::path::PathBuf;
 
 pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
     match fs::File::open(path) {
@@ -62,7 +62,6 @@ pub fn get_work_dir() -> Option<PathBuf> {
 
     Some(work_dir)
 }
-
 
 // Recursive function to go through the DOM tree and printout a basic structure
 pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
