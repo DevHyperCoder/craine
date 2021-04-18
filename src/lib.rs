@@ -22,44 +22,49 @@ pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
         Err(_) => None,
     }
 }
-pub fn get_name(path: PathBuf) -> String {
-    path.file_stem()
-        .expect("[work_dir] Can not parse filename")
-        .to_str()
-        .unwrap()
-        .to_owned()
+pub fn get_name(path: &PathBuf) -> Option<String> {
+    match path.file_stem() {
+        None => return None,
+        Some(file_stem) => match file_stem.to_str() {
+            Some(file_str) => return Some(file_str.to_owned()),
+            None => return None,
+        },
+    }
+}
+
+fn is_component(filename: String) -> bool {
+    let first_char = filename.chars().next();
+
+    match first_char {
+        Some(first_char) => first_char.is_uppercase(),
+        None => false,
+    }
 }
 
 // TODO Use work_dir instead of '.'
-pub fn get_pages_components_list() -> (Vec<PathBuf>, Vec<PathBuf>) {
+pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), &'static str> {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
-
     for i in fs::read_dir(".").expect("[work_dir] Can not read contents of directroy") {
         let path = i.unwrap().path();
-        let filename = path
-            .file_stem()
-            .expect("[work_dir] Can not parse filename")
-            .to_str()
-            .unwrap();
-
-
-        if filename
-            .chars()
-            .next()
-            .expect("[work_dir] Can not parse file name")
-            .is_uppercase()
-        {
-            components_vec.push(path);
-        } else {
-            pages_vec.push(path);
+        match get_name(&path) {
+            Some(filename) => {
+                if is_component(filename) {
+                    components_vec.push(path);
+                } else {
+                    pages_vec.push(path);
+                }
+            }
+            None => {
+                return Err("[work_dir] Can not convert filename to string");
+            }
         }
     }
 
     println!("{:?} {:?}", pages_vec, components_vec);
 
-    (pages_vec, components_vec)
+    Ok((pages_vec, components_vec))
 }
 pub fn get_work_dir() -> Option<PathBuf> {
     let i: Vec<String> = env::args().collect();
