@@ -4,7 +4,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-
+use std::result::Result;
 use craine::*;
 
 // Currently muts the var
@@ -49,7 +49,7 @@ fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
 
-    let pages_components = get_pages_components_list(work_dir);
+    let pages_components = get_pages_components_list();
 
     let pages = &pages_components.0;
 
@@ -57,7 +57,6 @@ fn main() {
         let page_hash = handler(page);
 
         let final_dom = replace_dom(page_hash.0.to_vec(), &page_hash.1);
-        println!("{:#?}", final_dom);
         let html = dom_tree_to_html(final_dom);
         for i in html {
             println!("{}", i);
@@ -83,8 +82,7 @@ fn handler(
         }
     }
 
-    // TODO error handling when dom is None
-    let dom_tree = Dom::parse(&contents.join("\n")).unwrap();
+    let dom_tree = Dom::parse(&contents.join("\n")).expect("Could not parse DOM");
     hashmap.insert(get_name(path.to_path_buf()), dom_tree.children.clone());
 
     (dom_tree.children.clone(), hashmap)
@@ -103,11 +101,13 @@ fn replace_dom(
         match i {
             Element(mut element) => {
                 if map.contains_key(&element.name) {
-                    // TODO more docs
+                    // Add the dom of component to `element.children`
+                    // Change varaint to normal so children can be added
+                    // Make current element a container ie, div
+
                     element.children = map.get(&element.name).unwrap().to_vec();
                     element.variant = html_parser::ElementVariant::Normal;
                     element.name = "div".to_string();
-                    println!("Detected component");
                 }
 
                 element.children = replace_dom(element.children, map);

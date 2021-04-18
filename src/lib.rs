@@ -29,11 +29,12 @@ pub fn get_name(path: PathBuf) -> String {
         .unwrap()
         .to_owned()
 }
-pub fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>) {
+
+// TODO Use work_dir instead of '.'
+pub fn get_pages_components_list() -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
-    println!("{:?}", work_dir);
 
     for i in fs::read_dir(".").expect("[work_dir] Can not read contents of directroy") {
         let path = i.unwrap().path();
@@ -43,7 +44,6 @@ pub fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBu
             .to_str()
             .unwrap();
 
-        println!("{}", filename);
 
         if filename
             .chars()
