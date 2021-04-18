@@ -39,7 +39,7 @@ Path: {:?}
     }
 
     for i in import_line {
-        content.remove(i);
+        content[i] = "".to_string();
     }
 
     imports
