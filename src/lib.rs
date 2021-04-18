@@ -22,7 +22,13 @@ pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
         Err(_) => None,
     }
 }
-
+pub fn get_name(path: PathBuf) -> String {
+    path.file_stem()
+        .expect("[work_dir] Can not parse filename")
+        .to_str()
+        .unwrap()
+        .to_owned()
+}
 pub fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
@@ -37,6 +43,8 @@ pub fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBu
             .to_str()
             .unwrap();
 
+        println!("{}", filename);
+
         if filename
             .chars()
             .next()
@@ -48,6 +56,8 @@ pub fn get_pages_components_list(work_dir: PathBuf) -> (Vec<PathBuf>, Vec<PathBu
             pages_vec.push(path);
         }
     }
+
+    println!("{:?} {:?}", pages_vec, components_vec);
 
     (pages_vec, components_vec)
 }
