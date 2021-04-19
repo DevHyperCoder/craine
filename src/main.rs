@@ -1,3 +1,4 @@
+use craine::*;
 use html_parser::Dom;
 use html_parser::Node::*;
 use regex::Regex;
@@ -5,10 +6,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::result::Result;
-use craine::*;
 
 // Currently muts the var
-fn parse_import(content: &mut Vec<String>) -> Vec<PathBuf> {
+fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, String> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
     let mut imports = vec![];
@@ -22,13 +22,13 @@ fn parse_import(content: &mut Vec<String>) -> Vec<PathBuf> {
 
                 let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
                 if !path.exists() {
-                    panic!(
+                    return Err(format!(
                         r#"
 [import] Can not find file/directory
 Path: {:?}
                            "#,
                         path
-                    );
+                    ));
                 }
 
                 imports.push(path);
@@ -42,14 +42,14 @@ Path: {:?}
         content[i] = "".to_string();
     }
 
-    imports
+    Ok(imports)
 }
 
 fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
 
-    let pages_components = get_pages_components_list();
+    let pages_components = get_pages_components_list().unwrap();
 
     let pages = &pages_components.0;
 
@@ -74,7 +74,7 @@ fn handler(
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    for import in parse_import(&mut contents) {
+    for import in parse_import(&mut contents).unwrap() {
         let returned_hash = handler(&import);
         for key in returned_hash.1 {
             let a = key.0;
@@ -83,7 +83,7 @@ fn handler(
     }
 
     let dom_tree = Dom::parse(&contents.join("\n")).expect("Could not parse DOM");
-    hashmap.insert(get_name(path.to_path_buf()), dom_tree.children.clone());
+    hashmap.insert(get_name(&path.to_path_buf()).unwrap(), dom_tree.children.clone());
 
     (dom_tree.children.clone(), hashmap)
 }
