@@ -23,7 +23,7 @@ craine uses the concept of pages and components.
 
 - **Page:** A page is a document that is rendered by the browser, containing `<!DOCTYPE>`, `<html> </html>` etc. Pages can have components but pages can not be imported in other components or pages
 A page always begins with a capital letter (PascalCase)
-**Components:** A component is like a split html fragment, ie without `<!DOCTYPE>`, `<html> </html>` etc. Components can contain other component and can be imported into pages/components.
+- **Components:** A component is like a split html fragment, ie without `<!DOCTYPE>`, `<html> </html>` etc. Components can contain other component and can be imported into pages/components.
 A component always begins with a small letter (camelCase)
 
 > NOTE: The filename restrictions are not conventions. The compiler is built to work that way
@@ -56,7 +56,7 @@ Notice how we used `<FancyButton />` like a tag in html ? that is how craine wor
 
 `FancyButton.html`
 
-```
+```html
 <button class="fancy">Click me!!</button>
 ```
 
@@ -68,7 +68,7 @@ The directory with the html files is termed as the working directory. Assuming c
 
 This would spit out the html into the terminal (ie, stdout). The example here shows formatted html so it is easy to follow
 
-```
+```html
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
