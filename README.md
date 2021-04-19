@@ -90,3 +90,6 @@ CRAINE currently accepts a `.craine` or `craine.config` file for the following p
 - `build_dir`: Sets the output directory.
 
 Config files are in json format.
+
+## LICENSE
+CRAINE is licensed under [GPL-3.0](./LICENSE)
