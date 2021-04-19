@@ -1,3 +1,4 @@
+use craine::workspace::*;
 use craine::*;
 use html_parser::Dom;
 use html_parser::Node::*;
@@ -49,6 +50,24 @@ fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
 
+    let workspace_config = get_workspace_config(PathBuf::new().join("."));
+
+    let workspace_config = match workspace_config {
+        Ok(workspace_config) => workspace_config,
+        Err(e) => panic!("Could not parse {}",e)
+    };
+
+    let build_dir = workspace_config.build_dir.expect("can not find build_dir");
+
+    match fs::create_dir_all(&build_dir) {
+        Ok(_) => {},
+        Err(e) => panic!("{:?} erorr in creating build dir\n{}",build_dir,e),
+    };
+
+    if !build_dir.read_dir().unwrap().next().is_none(){
+        panic!("build dir {:?} is not empty",build_dir);
+    }
+
     let pages_components = get_pages_components_list().unwrap();
 
     let pages = &pages_components.0;
@@ -58,9 +77,10 @@ fn main() {
 
         let final_dom = replace_dom(page_hash.0.to_vec(), &page_hash.1);
         let html = dom_tree_to_html(final_dom);
-        for i in html {
-            println!("{}", i);
-        }
+
+        let page_name = get_name(page).unwrap();
+        // TODO better error
+        fs::write(PathBuf::new().join(&build_dir).join(page_name),html.join("\n")).expect("cant write file");
     }
 }
 
@@ -83,7 +103,10 @@ fn handler(
     }
 
     let dom_tree = Dom::parse(&contents.join("\n")).expect("Could not parse DOM");
-    hashmap.insert(get_name(&path.to_path_buf()).unwrap(), dom_tree.children.clone());
+    hashmap.insert(
+        get_name(&path.to_path_buf()).unwrap(),
+        dom_tree.children.clone(),
+    );
 
     (dom_tree.children.clone(), hashmap)
 }

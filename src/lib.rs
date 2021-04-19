@@ -1,5 +1,6 @@
+pub mod workspace;
+
 use html_parser::Node::*;
-use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -65,17 +66,6 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), &'sta
     println!("{:?} {:?}", pages_vec, components_vec);
 
     Ok((pages_vec, components_vec))
-}
-pub fn get_work_dir() -> Option<PathBuf> {
-    let i: Vec<String> = env::args().collect();
-
-    let work_dir = PathBuf::from(&i[1]);
-
-    if !work_dir.is_dir() {
-        return None;
-    }
-
-    Some(work_dir)
 }
 
 // Recursive function to go through the DOM tree and printout a basic structure
