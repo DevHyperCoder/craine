@@ -50,9 +50,7 @@ fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
 
-    let workspace_config = get_workspace_config(PathBuf::new().join("."));
-
-    let workspace_config = match workspace_config {
+    let workspace_config = match get_workspace_config(PathBuf::new().join(".")){
         Ok(workspace_config) => workspace_config,
         Err(e) => panic!("Could not parse {}",e)
     };
@@ -61,7 +59,7 @@ fn main() {
 
     match fs::create_dir_all(&build_dir) {
         Ok(_) => {},
-        Err(e) => panic!("{:?} erorr in creating build dir\n{}",build_dir,e),
+        Err(e) => panic!("{:?} Error in creating build dir\n{}",build_dir,e),
     };
 
     if !build_dir.read_dir().unwrap().next().is_none(){
@@ -79,7 +77,7 @@ fn main() {
         let html = dom_tree_to_html(final_dom);
 
         let page_name = get_name(page).unwrap();
-        // TODO better error
+
         fs::write(PathBuf::new().join(&build_dir).join(page_name),html.join("\n")).expect("cant write file");
     }
 }

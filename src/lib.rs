@@ -23,6 +23,7 @@ pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
         Err(_) => None,
     }
 }
+
 pub fn get_name(path: &PathBuf) -> Option<String> {
     match path.file_stem() {
         None => return None,
