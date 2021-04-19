@@ -84,11 +84,9 @@ This would spit out the html into the terminal (ie, stdout). The example here sh
 
 You would now be able to see that, `<FancyButton />` got replaced with a div enclosing the component file.
 
-> Note: This behaviour will be changed soon, outputing to a file
+### Configuration
 
+CRAINE currently accepts a `.craine` or `craine.config` file for the following parameters:
+- `build_dir`: Sets the output directory.
 
-
-
-
-
-
+Config files are in json format.
