@@ -1,3 +1,4 @@
+use craine::error_handler::ErrorType;
 use craine::workspace::*;
 use craine::*;
 use html_parser::Dom;
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 use std::result::Result;
 
 // Currently muts the var
-fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, String> {
+fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
     let mut imports = vec![];
@@ -23,13 +24,7 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, String> {
 
                 let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
                 if !path.exists() {
-                    return Err(format!(
-                        r#"
-[import] Can not find file/directory
-Path: {:?}
-                           "#,
-                        path
-                    ));
+                    return Err(ErrorType::Parse("Can not find file/directory"));
                 }
 
                 imports.push(path);
@@ -50,20 +45,20 @@ fn main() {
     let work_dir = get_work_dir().expect("[work_dir] Expected directory, got file instead");
     std::env::set_current_dir(&work_dir).expect("Can not set working dir");
 
-    let workspace_config = match get_workspace_config(PathBuf::new().join(".")){
+    let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {
         Ok(workspace_config) => workspace_config,
-        Err(e) => panic!("Could not parse {}",e)
+        Err(e) => panic!("Could not parse {}", e),
     };
 
     let build_dir = workspace_config.build_dir.expect("can not find build_dir");
 
     match fs::create_dir_all(&build_dir) {
-        Ok(_) => {},
-        Err(e) => panic!("{:?} Error in creating build dir\n{}",build_dir,e),
+        Ok(_) => {}
+        Err(e) => panic!("{:?} Error in creating build dir\n{}", build_dir, e),
     };
 
-    if !build_dir.read_dir().unwrap().next().is_none(){
-        panic!("build dir {:?} is not empty",build_dir);
+    if !build_dir.read_dir().unwrap().next().is_none() {
+        panic!("build dir {:?} is not empty", build_dir);
     }
 
     let pages_components = get_pages_components_list().unwrap();
@@ -71,42 +66,62 @@ fn main() {
     let pages = &pages_components.0;
 
     for page in pages {
-        let page_hash = handler(page);
+        let page_hash = handler(page).unwrap();
 
         let final_dom = replace_dom(page_hash.0.to_vec(), &page_hash.1);
         let html = dom_tree_to_html(final_dom);
 
         let page_name = get_name(page).unwrap();
 
-        fs::write(PathBuf::new().join(&build_dir).join(page_name),html.join("\n")).expect("cant write file");
+        fs::write(
+            PathBuf::new().join(&build_dir).join(page_name),
+            html.join("\n"),
+        )
+        .expect("cant write file");
     }
 }
 
 fn handler(
     path: &PathBuf,
-) -> (
-    Vec<html_parser::Node>,
-    HashMap<String, Vec<html_parser::Node>>,
-) {
+) -> Result<
+    (
+        Vec<html_parser::Node>,
+        HashMap<String, Vec<html_parser::Node>>,
+    ),
+    ErrorType,
+> {
     let mut hashmap = HashMap::new();
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    for import in parse_import(&mut contents).unwrap() {
-        let returned_hash = handler(&import);
+    let imports = match parse_import(&mut contents) {
+        Ok(imports) => imports,
+        Err(e) => return Err(e),
+    };
+
+    for import in imports {
+        let returned_hash = match handler(&import) {
+            Ok(hash) => hash,
+            Err(e) => return Err(e),
+        };
+
         for key in returned_hash.1 {
             let a = key.0;
             hashmap.entry(a.to_owned()).or_insert(key.1);
         }
     }
 
-    let dom_tree = Dom::parse(&contents.join("\n")).expect("Could not parse DOM");
+    let dom_tree = match Dom::parse(&contents.join("\n")) {
+        Ok(tree) => tree,
+        Err(_) => return Err(ErrorType::Parse("Unable to parse dom tree")),
+    };
+
     hashmap.insert(
         get_name(&path.to_path_buf()).unwrap(),
         dom_tree.children.clone(),
     );
 
-    (dom_tree.children.clone(), hashmap)
+    Ok((dom_tree.children.clone(), hashmap))
 }
 
 // Go through the dom_tree.

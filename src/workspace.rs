@@ -1,3 +1,4 @@
+use super::error_handler::ErrorType;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
@@ -42,11 +43,14 @@ pub fn get_workspace_config_path(work_dir: PathBuf) -> Option<PathBuf> {
     None
 }
 
-pub fn get_workspace_config(work_dir: PathBuf) -> Result<WorkspaceConfig, serde_json::Error> {
+pub fn get_workspace_config(work_dir: PathBuf) -> Result<WorkspaceConfig, ErrorType> {
     let path = get_workspace_config_path(work_dir);
 
     match path {
-        Some(path) => return serde_json::from_str(&fs::read_to_string(path).unwrap()),
+        Some(path) => match serde_json::from_str(&fs::read_to_string(path).unwrap()) {
+            Ok(workspace) => Ok(workspace),
+            Err(_) => Err(ErrorType::Workspace("Can not parse workspace config file")),
+        },
         None => {
             return Ok(WorkspaceConfig::new());
         }

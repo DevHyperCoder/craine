@@ -1,3 +1,4 @@
+pub mod error_handler;
 pub mod workspace;
 
 use html_parser::Node::*;
@@ -6,8 +7,10 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
-    match fs::File::open(path) {
+use error_handler::ErrorType;
+
+pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>,ErrorType> {
+    match fs::File::open(&path) {
         Ok(file) => {
             let buf_reader = BufReader::new(file);
             let line_vec: Vec<_> = buf_reader.lines().collect();
@@ -18,9 +21,9 @@ pub fn read_file_to_lines(path: PathBuf) -> Option<Vec<String>> {
                 string_vec.push(i.unwrap() as String);
             }
 
-            return Some(string_vec);
+            return Ok(string_vec);
         }
-        Err(_) => None,
+        Err(_) => Err(ErrorType::WorkDir("Unable to open path")),
     }
 }
 
@@ -44,11 +47,16 @@ fn is_component(filename: String) -> bool {
 }
 
 // TODO Use work_dir instead of '.'
-pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), &'static str> {
+pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
-    for i in fs::read_dir(".").expect("[work_dir] Can not read contents of directroy") {
+    let contents = match fs::read_dir(".") {
+        Ok(contents) => contents,
+        Err(_) => return Err(ErrorType::WorkDir("Can not read contents of directroy"))
+    };
+
+    for i in contents {
         let path = i.unwrap().path();
         match get_name(&path) {
             Some(filename) => {
@@ -59,7 +67,7 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), &'sta
                 }
             }
             None => {
-                return Err("[work_dir] Can not convert filename to string");
+                return Err(ErrorType::WorkDir("Can not convert filename to string"));
             }
         }
     }
