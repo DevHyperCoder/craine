@@ -3,7 +3,7 @@
 #![deny(missing_docs)]
 
 /// Contains ErrorType enum with all the possible error types craine can generate
-/// 
+///
 /// Implements fmt::Display for ErrorType
 pub mod error_handler;
 
@@ -106,7 +106,7 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), Error
     Ok((pages_vec, components_vec))
 }
 
-/** 
+/**
  * Recursive function to go through the DOM tree
  *
  * Adds
@@ -114,7 +114,7 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), Error
  * - Id
  * - Attributes
  * - Children
- * - 
+ * -
  */
 pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
     let mut output = vec![];
@@ -182,19 +182,17 @@ pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
     output
 }
 
-///
+struct CraineHash {
+    dom_tree: Vec<html_parser::Node>,
+    component_hash: HashMap<String, Vec<html_parser::Node>>,
+    used_components: Vec<String>,
+}
+
 /// Creates a component hash map and returns (Node vector,HashMap of compoenent name and dom_tree)
 /// path: A path to a page/component to get the dom tree and compoenent hash of
-fn handler(
-    path: &PathBuf,
-) -> Result<
-    (
-        Vec<html_parser::Node>,
-        HashMap<String, Vec<html_parser::Node>>,
-    ),
-    ErrorType,
-> {
+fn handler(path: &PathBuf) -> Result<CraineHash, ErrorType> {
     let mut hashmap = HashMap::new();
+    let mut used_components: Vec<String> = vec![];
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
@@ -202,8 +200,13 @@ fn handler(
         Ok(imports) => imports,
         Err(e) => return Err(e),
     };
-
     for import in imports {
+        //blindly trusting that this is a compoenent might be a bad idea in the future
+        used_components.push(match get_name(&import) {
+            Some(p) => p,
+            None => return Err(ErrorType::Parse("unable to get import path")),
+        });
+
         //handle components
         let returned_hash = match handler(&import) {
             Ok(hash) => hash,
@@ -212,9 +215,13 @@ fn handler(
 
         // add all component hash to current one
         // if already in, not touch it
-        for key in returned_hash.1 {
+        for key in returned_hash.component_hash {
             let a = key.0;
             hashmap.entry(a.to_owned()).or_insert(key.1);
+        }
+
+        for key in returned_hash.used_components {
+            used_components.push(key.to_string());
         }
     }
 
@@ -228,7 +235,11 @@ fn handler(
         dom_tree.children.clone(),
     );
 
-    Ok((dom_tree.children.clone(), hashmap))
+    Ok(CraineHash {
+        dom_tree: dom_tree.children.clone(),
+        component_hash: hashmap,
+        used_components,
+    })
 }
 
 // Go through the dom_tree.
@@ -266,7 +277,7 @@ fn replace_dom(
 
 /**
  * Parses import statements and removes the statement from the given `content` vector
- * Uses `import\s+(\S+)` to get import statements. 
+ * Uses `import\s+(\S+)` to get import statements.
  * Returns err if the file path of the import statement can not be found when making it abs path
  *
  * */
@@ -351,6 +362,7 @@ pub fn run() -> Result<(), ErrorType> {
     };
 
     let pages = &pages_components.0;
+    let mut used_components = vec![];
 
     for page in pages {
         let page_hash = match handler(page) {
@@ -358,7 +370,11 @@ pub fn run() -> Result<(), ErrorType> {
             Ok(hash) => hash,
         };
 
-        let final_dom = replace_dom(page_hash.0.to_vec(), &page_hash.1);
+        for i in page_hash.used_components {
+            used_components.push(i)
+        }
+
+        let final_dom = replace_dom(page_hash.dom_tree.to_vec(), &page_hash.component_hash);
         let html = dom_tree_to_html(final_dom);
 
         let page_name = match get_name(page) {
@@ -373,6 +389,22 @@ pub fn run() -> Result<(), ErrorType> {
             Ok(_) => {}
             Err(_) => return Err(ErrorType::WorkDir("Unable to write file")),
         };
+    }
+
+    // Generate warnings
+
+    println!("{:?} {:?}", used_components, pages_components.1);
+    for i in pages_components.1 {
+        //TODO error ; expect call
+        if !(used_components.contains(&get_name(&i).expect("asd"))) {
+            let path_str = i.to_str();
+            let path_str = match path_str {
+                Some(path) => path,
+                None => return Err(ErrorType::Parse("couldnt open dir")),
+            };
+
+            println!("Unused: {}", path_str);
+        }
     }
 
     Ok(())

@@ -1,6 +1,4 @@
 ///adsfasdf
-
-
 use super::error_handler::ErrorType;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -14,9 +12,9 @@ use std::path::PathBuf;
  */
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WorkspaceConfig {
-/**
- * - build_dir: Directory to output final, compiled HTML
-   */
+    /**
+     * - build_dir: Directory to output final, compiled HTML
+     */
     pub build_dir: Option<PathBuf>,
 }
 
