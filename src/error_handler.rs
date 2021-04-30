@@ -1,10 +1,25 @@
 use std::fmt;
 
 #[derive(Debug)]
+/**
+ * ErrorTypes that can be generated during runtime
+ */
 pub enum ErrorType {
+    /**
+     * Any error related to work directory like, unable to open, permission etc
+     */
     WorkDir(&'static str),
+    /**
+     * Any error related to workspace configuration files
+     */
     Workspace(&'static str),
+    /**
+     * Permission errors or unable to open build dir
+     */
     BuildDir(&'static str),
+    /**
+     * Any error during parsing or writing to file
+     */
     Parse(&'static str),
 }
 

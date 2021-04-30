@@ -1,20 +1,34 @@
+//! CRAINE is a HTML compiler built for react like components in pure html
+
+#![deny(missing_docs)]
+
+/// Contains ErrorType enum with all the possible error types craine can generate
+/// 
+/// Implements fmt::Display for ErrorType
 pub mod error_handler;
+
+/// Contains WorkspaceConfig struct and related "workspace" impls
 pub mod workspace;
 
+use html_parser::Dom;
+use html_parser::Node::*;
+use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::collections::HashMap;
 use std::result::Result;
-use html_parser::Dom;
-use html_parser::Node::*;
-use regex::Regex;
 
 use error_handler::ErrorType;
 use workspace::*;
 
-pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>,ErrorType> {
+/**
+ * Read file to a `\n` seperated to vector
+ *
+ * Errors if File::open() fails
+ */
+pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>, ErrorType> {
     match fs::File::open(&path) {
         Ok(file) => {
             let buf_reader = BufReader::new(file);
@@ -32,6 +46,10 @@ pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>,ErrorType> {
     }
 }
 
+/**
+ * Returns  Option<String> of the file name without extension from a PathBuf
+ * Returns None if path.file_stem() returns None OR if the file_stem conversion to string fails
+ */
 pub fn get_name(path: &PathBuf) -> Option<String> {
     match path.file_stem() {
         None => return None,
@@ -42,6 +60,9 @@ pub fn get_name(path: &PathBuf) -> Option<String> {
     }
 }
 
+/**
+ * Returns true if the first character of the filename is a uppercase letter
+ */
 fn is_component(filename: String) -> bool {
     let first_char = filename.chars().next();
 
@@ -51,14 +72,19 @@ fn is_component(filename: String) -> bool {
     }
 }
 
-// TODO Use work_dir instead of '.'
+/**
+ * Returns a tuple of two vectors, (pages_vec,components_vec)
+ * Reads all the files (no globbing) and uses `is_component()` to construct final vector
+ * NOTE: Already assumes that the program's working directory is `work_dir`
+ * TODO: Use work_dir instead of '.'
+ */
 pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
     let contents = match fs::read_dir(".") {
         Ok(contents) => contents,
-        Err(_) => return Err(ErrorType::WorkDir("Can not read contents of directroy"))
+        Err(_) => return Err(ErrorType::WorkDir("Can not read contents of directroy")),
     };
 
     for i in contents {
@@ -67,9 +93,9 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), Error
             Some(filename) => {
                 if is_component(filename) {
                     components_vec.push(path);
-                } else {
-                    pages_vec.push(path);
+                    continue;
                 }
+                pages_vec.push(path);
             }
             None => {
                 return Err(ErrorType::WorkDir("Can not convert filename to string"));
@@ -77,12 +103,19 @@ pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), Error
         }
     }
 
-    println!("{:?} {:?}", pages_vec, components_vec);
-
     Ok((pages_vec, components_vec))
 }
 
-// Recursive function to go through the DOM tree and printout a basic structure
+/** 
+ * Recursive function to go through the DOM tree
+ *
+ * Adds
+ * - Classes
+ * - Id
+ * - Attributes
+ * - Children
+ * - 
+ */
 pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
     let mut output = vec![];
     for i in dom_tree {
@@ -149,7 +182,9 @@ pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
     output
 }
 
-
+///
+/// Creates a component hash map and returns (Node vector,HashMap of compoenent name and dom_tree)
+/// path: A path to a page/component to get the dom tree and compoenent hash of
 fn handler(
     path: &PathBuf,
 ) -> Result<
@@ -169,11 +204,14 @@ fn handler(
     };
 
     for import in imports {
+        //handle components
         let returned_hash = match handler(&import) {
             Ok(hash) => hash,
             Err(e) => return Err(e),
         };
 
+        // add all component hash to current one
+        // if already in, not touch it
         for key in returned_hash.1 {
             let a = key.0;
             hashmap.entry(a.to_owned()).or_insert(key.1);
@@ -226,6 +264,12 @@ fn replace_dom(
     new_dom_tree
 }
 
+/**
+ * Parses import statements and removes the statement from the given `content` vector
+ * Uses `import\s+(\S+)` to get import statements. 
+ * Returns err if the file path of the import statement can not be found when making it abs path
+ *
+ * */
 // Currently muts the var
 fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
@@ -258,9 +302,19 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
     Ok(imports)
 }
 
-
-pub fn run() -> Result<(),ErrorType> {
-
+/**
+ * Main library function to handle everything. Returns ErrorType (everything is bubled)
+ *
+ * FLOW
+ * - Get Work dir
+ * - Get config
+ * - Get build dir and create
+ * - For each page, get component hash
+ * - Replace components with actual html
+ * - Write the final dom_tree HTML to file
+ *
+ * */
+pub fn run() -> Result<(), ErrorType> {
     let work_dir = match get_work_dir() {
         Some(work_dir) => work_dir,
         None => return Err(ErrorType::Parse("Expected dir got file")),
@@ -268,8 +322,7 @@ pub fn run() -> Result<(),ErrorType> {
 
     match std::env::set_current_dir(&work_dir) {
         Err(_) => return Err(ErrorType::WorkDir("Unable to set current dir")),
-        Ok(_) => {},
-
+        Ok(_) => {}
     }
 
     let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {
@@ -294,13 +347,13 @@ pub fn run() -> Result<(),ErrorType> {
 
     let pages_components = match get_pages_components_list() {
         Ok(e) => e,
-        Err(e) => return Err(e)
+        Err(e) => return Err(e),
     };
 
     let pages = &pages_components.0;
 
     for page in pages {
-        let page_hash = match  handler(page) {
+        let page_hash = match handler(page) {
             Err(e) => return Err(e),
             Ok(hash) => hash,
         };
@@ -317,11 +370,9 @@ pub fn run() -> Result<(),ErrorType> {
             PathBuf::new().join(&build_dir).join(page_name),
             html.join("\n"),
         ) {
-
-            Ok(_) => {},
+            Ok(_) => {}
             Err(_) => return Err(ErrorType::WorkDir("Unable to write file")),
         };
-        
     }
 
     Ok(())
