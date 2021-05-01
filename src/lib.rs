@@ -10,6 +10,9 @@ pub mod error_handler;
 /// Contains WorkspaceConfig struct and related "workspace" impls
 pub mod workspace;
 
+/// Variable parsing module
+pub mod var_parser;
+
 use html_parser::Dom;
 use html_parser::Node::*;
 use regex::Regex;
