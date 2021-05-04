@@ -252,14 +252,12 @@ fn replace_dom(
     dom_tree: Vec<html_parser::Node>,
     map: &HashMap<String, Vec<html_parser::Node>>,
     vars: HashMap<String, String>,
-    spaces:u32,
 ) -> Vec<html_parser::Node> {
     let mut new_dom_tree: Vec<html_parser::Node> = vec![];
-    let mut scoped_vars = HashMap::new();
-    scoped_vars.extend(vars);
     for i in dom_tree {
         match i {
             Element(mut element) => {
+                let mut scoped_vars = vars.clone();
                 if map.contains_key(&element.name) {
                     // it is a compoenent
                     // parsing variable now
@@ -283,11 +281,6 @@ fn replace_dom(
                         }
                     }
 
-                    for _ in 0..spaces{
-                        print!(" ");
-                    }
-                    println!("var_hash [{}]: {:?}",element.name, &scoped_vars);
-
                     // Add the dom of component to `element.children`
                     // Change varaint to normal so children can be added
                     // Make current element a container ie, div
@@ -296,7 +289,7 @@ fn replace_dom(
                     element.name = "div".to_string();
                 }
 
-                element.children = replace_dom(element.children, map, scoped_vars.clone(),spaces+1);
+                element.children = replace_dom(element.children, map, scoped_vars.clone());
                 new_dom_tree.push(Element(element));
             }
             Text(text) => new_dom_tree.push(Text(text)),
@@ -409,8 +402,8 @@ pub fn run() -> Result<(), ErrorType> {
         let final_dom = replace_dom(
             page_hash.dom_tree.to_vec(),
             &page_hash.component_hash,
-             HashMap::new(),
-             0
+            HashMap::new(),
+            0,
         );
         let html = dom_tree_to_html(final_dom);
 
