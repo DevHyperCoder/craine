@@ -11,3 +11,4 @@ html_parser = "0.6.0"
 regex = "1.4.5"
 serde_json = "1.0.64"
 serde = {version = "1.0.0", features=["derive"]}
+lazy_static = "1.0.0"
