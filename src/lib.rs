@@ -255,9 +255,9 @@ fn replace_dom(
 ) -> Vec<html_parser::Node> {
     let mut new_dom_tree: Vec<html_parser::Node> = vec![];
     for i in dom_tree {
+        let mut scoped_vars = vars.clone();
         match i {
             Element(mut element) => {
-                let mut scoped_vars = vars.clone();
                 if map.contains_key(&element.name) {
                     // it is a compoenent
                     // parsing variable now
@@ -292,7 +292,10 @@ fn replace_dom(
                 element.children = replace_dom(element.children, map, scoped_vars.clone());
                 new_dom_tree.push(Element(element));
             }
-            Text(text) => new_dom_tree.push(Text(text)),
+            Text(texta) => {
+                    let text = var_parser::replace_variables(&texta, scoped_vars).unwrap();
+                new_dom_tree.push(Text(text))
+            }
             _ => {}
         }
     }
@@ -403,7 +406,6 @@ pub fn run() -> Result<(), ErrorType> {
             page_hash.dom_tree.to_vec(),
             &page_hash.component_hash,
             HashMap::new(),
-            0,
         );
         let html = dom_tree_to_html(final_dom);
 
