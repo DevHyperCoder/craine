@@ -258,6 +258,28 @@ fn replace_dom(
         let mut scoped_vars = vars.clone();
         match i {
             Element(mut element) => {
+                use var_parser::replace_variables;
+
+                    for class in &mut  element.classes {
+                        *class = replace_variables(class, scoped_vars.clone()).unwrap();
+                    }
+
+                    if element.id.is_some() {
+                        element.id = Some(
+                            replace_variables(&element.id.unwrap(),scoped_vars.clone()).unwrap()
+                        );
+                    }
+
+                    for attr in &mut element.attributes {
+                        match attr.1 {
+                            Some(_) =>{
+                                let new_attr =  replace_variables(attr.1.as_ref().unwrap(),scoped_vars.clone()).unwrap();
+                                *attr.1 =Some( new_attr);
+                            },
+                            None =>{},
+                        }
+                    }
+
                 if map.contains_key(&element.name) {
                     // it is a compoenent
                     // parsing variable now
