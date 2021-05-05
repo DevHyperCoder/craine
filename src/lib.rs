@@ -260,25 +260,26 @@ fn replace_dom(
             Element(mut element) => {
                 use var_parser::replace_variables;
 
-                    for class in &mut  element.classes {
-                        *class = replace_variables(class, scoped_vars.clone()).unwrap();
-                    }
+                for class in &mut element.classes {
+                    *class = replace_variables(class, scoped_vars.clone()).unwrap();
+                }
 
-                    if element.id.is_some() {
-                        element.id = Some(
-                            replace_variables(&element.id.unwrap(),scoped_vars.clone()).unwrap()
-                        );
-                    }
+                if element.id.is_some() {
+                    element.id =
+                        Some(replace_variables(&element.id.unwrap(), scoped_vars.clone()).unwrap());
+                }
 
-                    for attr in &mut element.attributes {
-                        match attr.1 {
-                            Some(_) =>{
-                                let new_attr =  replace_variables(attr.1.as_ref().unwrap(),scoped_vars.clone()).unwrap();
-                                *attr.1 =Some( new_attr);
-                            },
-                            None =>{},
+                for attr in &mut element.attributes {
+                    match attr.1 {
+                        Some(_) => {
+                            let new_attr =
+                                replace_variables(attr.1.as_ref().unwrap(), scoped_vars.clone())
+                                    .unwrap();
+                            *attr.1 = Some(new_attr);
                         }
+                        None => {}
                     }
+                }
 
                 if map.contains_key(&element.name) {
                     // it is a compoenent
@@ -315,7 +316,7 @@ fn replace_dom(
                 new_dom_tree.push(Element(element));
             }
             Text(texta) => {
-                    let text = var_parser::replace_variables(&texta, scoped_vars).unwrap();
+                let text = var_parser::replace_variables(&texta, scoped_vars).unwrap();
                 new_dom_tree.push(Text(text))
             }
             _ => {}
