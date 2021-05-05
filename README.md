@@ -62,6 +62,42 @@ Notice how we used `<FancyButton />` like a tag in html ? that is how craine wor
 
 This is the FancyButton component, just containing a html fragment.
 
+### Variables
+
+Variables in CRAINE are very similar to "props" in react.js ; Variables in CRAINE are also scoped variables.
+
+**Syntax:**
+
+To define a variable, `{name||value}` is used. If a new variable is declared, the value is overriden. 
+
+To get the value of a variable, `(name)` is used. A variable's value can be used in classes, id, attributes and text inside the component.
+
+> In the future, this will be changed to use `{name}` to remain consistent with the definition syntax
+
+**Example**
+
+Modify the contents of the body tag:
+
+```html
+<body>
+    <FancyButton>
+        {color||blue}
+    </FancyButton>
+</body>
+```
+
+And, modify the `FancyButton` component with this:
+
+```html
+<style>
+    .fancy {
+        background-color: "(color)"
+    }
+</style>
+
+<button class="fancy">Click me!!</button>
+```
+
 ### Compiling with CRAINE
 
 The directory with the html files is termed as the working directory. Assuming craine is installed and the binary is in `$PATH`, run `craine <path to working directory>` in a terminal.
