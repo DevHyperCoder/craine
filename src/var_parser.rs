@@ -13,7 +13,7 @@ use std::collections::HashMap;
  * Error:
  *  - If the variable name is empty
  */
-pub fn get_variables(content: &Vec<&str>) -> Result<HashMap<String, String>, ErrorType> {
+pub fn get_variables(content: &[&str]) -> Result<HashMap<String, String>, ErrorType> {
     lazy_static! {
         static ref VARIABLE_RE: Regex =
             Regex::new("\\{([a-zA-Z0-9_-]+)\\|\\|([\\s\\S]+)\\}").unwrap();
@@ -52,7 +52,7 @@ pub fn get_variables(content: &Vec<&str>) -> Result<HashMap<String, String>, Err
  * concatenation might help us)
  */
 pub fn replace_variables(
-    content: &String,
+    content: &str,
     variables: HashMap<String, String>,
 ) -> Result<String, ErrorType> {
     let mut c = content.to_string();

@@ -21,6 +21,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::path::Path;
 use std::result::Result;
 
 use error_handler::ErrorType;
@@ -43,7 +44,7 @@ pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>, ErrorType> {
                 string_vec.push(i.unwrap() as String);
             }
 
-            return Ok(string_vec);
+             Ok(string_vec)
         }
         Err(_) => Err(ErrorType::WorkDir("Unable to open path")),
     }
@@ -53,12 +54,12 @@ pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>, ErrorType> {
  * Returns  Option<String> of the file name without extension from a PathBuf
  * Returns None if path.file_stem() returns None OR if the file_stem conversion to string fails
  */
-pub fn get_name(path: &PathBuf) -> Option<String> {
+pub fn get_name(path: &Path) -> Option<String> {
     match path.file_stem() {
-        None => return None,
+        None =>  None,
         Some(file_stem) => match file_stem.to_str() {
-            Some(file_str) => return Some(file_str.to_owned()),
-            None => return None,
+            Some(file_str) =>  Some(file_str.to_owned()),
+            None =>  None,
         },
     }
 }
@@ -193,7 +194,7 @@ struct CraineHash {
 
 /// Creates a component hash map and returns (Node vector,HashMap of compoenent name and dom_tree)
 /// path: A path to a page/component to get the dom tree and compoenent hash of
-fn handler(path: &PathBuf) -> Result<CraineHash, ErrorType> {
+fn handler(path: &Path) -> Result<CraineHash, ErrorType> {
     let mut hashmap = HashMap::new();
     let mut used_components: Vec<String> = vec![];
     let mut contents =
@@ -239,7 +240,7 @@ fn handler(path: &PathBuf) -> Result<CraineHash, ErrorType> {
     );
 
     Ok(CraineHash {
-        dom_tree: dom_tree.children.clone(),
+        dom_tree: dom_tree.children,
         component_hash: hashmap,
         used_components,
     })
@@ -289,9 +290,9 @@ fn replace_dom(
                         match var {
                             Element(_) => panic!("no elem inside a compoenent"),
                             Text(text) => {
-                                let mut content: Vec<&str> = text.split("\n").collect();
+                                let content: Vec<&str> = text.split('\n').collect();
 
-                                let asdf = var_parser::get_variables(&mut content);
+                                let asdf = var_parser::get_variables(&content);
 
                                 match asdf {
                                     Ok(variables) => {
@@ -341,8 +342,7 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
     let mut import_line = vec![];
 
     for (index, i) in content.iter().enumerate() {
-        match regex.captures(&i) {
-            Some(captures) => {
+        if let Some(captures)  = regex.captures(&i) {
                 let file_path = captures.get(1).map_or("", |m| m.as_str());
 
                 let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
@@ -352,8 +352,6 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
 
                 imports.push(path);
                 import_line.push(index);
-            }
-            None => {}
         }
     }
 
@@ -382,9 +380,8 @@ pub fn run() -> Result<(), ErrorType> {
         None => return Err(ErrorType::Parse("Expected dir got file")),
     };
 
-    match std::env::set_current_dir(&work_dir) {
-        Err(_) => return Err(ErrorType::WorkDir("Unable to set current dir")),
-        Ok(_) => {}
+    if std::env::set_current_dir(&work_dir).is_err() {
+     return Err(ErrorType::WorkDir("Unable to set current dir"));
     }
 
     let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {
@@ -403,7 +400,7 @@ pub fn run() -> Result<(), ErrorType> {
     };
 
     // TODO change behaviour in future
-    if !build_dir.read_dir().unwrap().next().is_none() {
+    if build_dir.read_dir().unwrap().next().is_some() {
         return Err(ErrorType::BuildDir("build dir is not empty"));
     }
 
