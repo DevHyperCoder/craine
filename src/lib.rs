@@ -10,6 +10,9 @@ pub mod error_handler;
 /// Contains WorkspaceConfig struct and related "workspace" impls
 pub mod workspace;
 
+/// Variable parsing module
+pub mod var_parser;
+
 use html_parser::Dom;
 use html_parser::Node::*;
 use regex::Regex;
@@ -248,26 +251,74 @@ fn handler(path: &PathBuf) -> Result<CraineHash, ErrorType> {
 fn replace_dom(
     dom_tree: Vec<html_parser::Node>,
     map: &HashMap<String, Vec<html_parser::Node>>,
+    vars: HashMap<String, String>,
 ) -> Vec<html_parser::Node> {
     let mut new_dom_tree: Vec<html_parser::Node> = vec![];
-
     for i in dom_tree {
+        let mut scoped_vars = vars.clone();
         match i {
             Element(mut element) => {
+                use var_parser::replace_variables;
+
+                for class in &mut element.classes {
+                    *class = replace_variables(class, scoped_vars.clone()).unwrap();
+                }
+
+                if element.id.is_some() {
+                    element.id =
+                        Some(replace_variables(&element.id.unwrap(), scoped_vars.clone()).unwrap());
+                }
+
+                for attr in &mut element.attributes {
+                    match attr.1 {
+                        Some(_) => {
+                            let new_attr =
+                                replace_variables(attr.1.as_ref().unwrap(), scoped_vars.clone())
+                                    .unwrap();
+                            *attr.1 = Some(new_attr);
+                        }
+                        None => {}
+                    }
+                }
+
                 if map.contains_key(&element.name) {
+                    // it is a compoenent
+                    // parsing variable now
+
+                    for var in element.children {
+                        match var {
+                            Element(_) => panic!("no elem inside a compoenent"),
+                            Text(text) => {
+                                let mut content: Vec<&str> = text.split("\n").collect();
+
+                                let asdf = var_parser::get_variables(&mut content);
+
+                                match asdf {
+                                    Ok(variables) => {
+                                        scoped_vars.extend(variables);
+                                    }
+                                    Err(_) => panic!("asdf"),
+                                };
+                            }
+                            Comment(_) => {}
+                        }
+                    }
+
                     // Add the dom of component to `element.children`
                     // Change varaint to normal so children can be added
                     // Make current element a container ie, div
-
                     element.children = map.get(&element.name).unwrap().to_vec();
                     element.variant = html_parser::ElementVariant::Normal;
                     element.name = "div".to_string();
                 }
 
-                element.children = replace_dom(element.children, map);
+                element.children = replace_dom(element.children, map, scoped_vars.clone());
                 new_dom_tree.push(Element(element));
             }
-            Text(text) => new_dom_tree.push(Text(text)),
+            Text(texta) => {
+                let text = var_parser::replace_variables(&texta, scoped_vars).unwrap();
+                new_dom_tree.push(Text(text))
+            }
             _ => {}
         }
     }
@@ -374,7 +425,11 @@ pub fn run() -> Result<(), ErrorType> {
             used_components.push(i)
         }
 
-        let final_dom = replace_dom(page_hash.dom_tree.to_vec(), &page_hash.component_hash);
+        let final_dom = replace_dom(
+            page_hash.dom_tree.to_vec(),
+            &page_hash.component_hash,
+            HashMap::new(),
+        );
         let html = dom_tree_to_html(final_dom);
 
         let page_name = match get_name(page) {
