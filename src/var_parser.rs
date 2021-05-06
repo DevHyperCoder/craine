@@ -16,7 +16,7 @@ use std::collections::HashMap;
 pub fn get_variables(content: &[&str]) -> Result<HashMap<String, String>, ErrorType> {
     lazy_static! {
         static ref VARIABLE_RE: Regex =
-            Regex::new("\\{([a-zA-Z0-9_-]+)\\|\\|([\\s\\S]+)\\}").unwrap();
+            Regex::new("\\{([a-zA-Z0-9_-]*)\\|\\|([\\s\\S]+)\\}").unwrap();
     }
 
     let mut variables = HashMap::new();
