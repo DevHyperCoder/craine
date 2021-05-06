@@ -20,8 +20,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::path::PathBuf;
 use std::path::Path;
+use std::path::PathBuf;
 use std::result::Result;
 
 use error_handler::ErrorType;
@@ -44,7 +44,7 @@ pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>, ErrorType> {
                 string_vec.push(i.unwrap() as String);
             }
 
-             Ok(string_vec)
+            Ok(string_vec)
         }
         Err(_) => Err(ErrorType::WorkDir("Unable to open path")),
     }
@@ -56,10 +56,10 @@ pub fn read_file_to_lines(path: PathBuf) -> Result<Vec<String>, ErrorType> {
  */
 pub fn get_name(path: &Path) -> Option<String> {
     match path.file_stem() {
-        None =>  None,
+        None => None,
         Some(file_stem) => match file_stem.to_str() {
-            Some(file_str) =>  Some(file_str.to_owned()),
-            None =>  None,
+            Some(file_str) => Some(file_str.to_owned()),
+            None => None,
         },
     }
 }
@@ -342,16 +342,16 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
     let mut import_line = vec![];
 
     for (index, i) in content.iter().enumerate() {
-        if let Some(captures)  = regex.captures(&i) {
-                let file_path = captures.get(1).map_or("", |m| m.as_str());
+        if let Some(captures) = regex.captures(&i) {
+            let file_path = captures.get(1).map_or("", |m| m.as_str());
 
-                let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
-                if !path.exists() {
-                    return Err(ErrorType::Parse("Can not find file/directory"));
-                }
+            let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
+            if !path.exists() {
+                return Err(ErrorType::Parse("Can not find file/directory"));
+            }
 
-                imports.push(path);
-                import_line.push(index);
+            imports.push(path);
+            import_line.push(index);
         }
     }
 
@@ -381,7 +381,7 @@ pub fn run() -> Result<(), ErrorType> {
     };
 
     if std::env::set_current_dir(&work_dir).is_err() {
-     return Err(ErrorType::WorkDir("Unable to set current dir"));
+        return Err(ErrorType::WorkDir("Unable to set current dir"));
     }
 
     let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {

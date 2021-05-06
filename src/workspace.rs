@@ -24,7 +24,7 @@ impl WorkspaceConfig {
      * - build_dir = "./build"
      */
     fn new() -> Self {
-         WorkspaceConfig {
+        WorkspaceConfig {
             build_dir: Some(PathBuf::new().join("./build")),
         }
     }
@@ -79,8 +79,6 @@ pub fn get_workspace_config(work_dir: PathBuf) -> Result<WorkspaceConfig, ErrorT
             Ok(workspace) => Ok(workspace),
             Err(_) => Err(ErrorType::Workspace("Can not parse workspace config file")),
         },
-        None => {
-             Ok(WorkspaceConfig::new())
-        }
+        None => Ok(WorkspaceConfig::new()),
     }
 }
