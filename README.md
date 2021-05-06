@@ -12,6 +12,7 @@ You **can** use javascript but it is **not required** to use craine
 
 - Clone the repo
 - Run `cargo check` This compiles the program and informs it there are any errors. If any, please file a issue.
+- Run `cargo test` This runs the [tests](./tests) for the program. If any tests fail, please file a issue.
 - You can install it globally by `cargo install --path .`
 
 ## Tutorial
