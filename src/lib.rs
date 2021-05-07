@@ -67,7 +67,7 @@ pub fn get_name(path: &Path) -> Option<String> {
 /**
  * Returns true if the first character of the filename is a uppercase letter
  */
-fn is_component(filename: String) -> bool {
+pub fn is_component(filename: String) -> bool {
     let first_char = filename.chars().next();
 
     match first_char {
