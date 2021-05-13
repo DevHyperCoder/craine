@@ -394,20 +394,31 @@ pub fn run() -> Result<(), ErrorType> {
         None => return Err(ErrorType::BuildDir("Unable to find build directory")),
     };
 
+        // clear the dir
+    match build_dir.read_dir(){
+        Ok(_)=>{
+
+           match  std::fs::remove_dir_all(&build_dir) {
+               Ok(_) => {},
+               Err(_) => return Err(ErrorType::BuildDir("Unable to remove build_dir")),
+
+           }
+        },
+        _=>{}
+    };
+
     match fs::create_dir_all(&build_dir) {
         Ok(_) => {}
         Err(_) => return Err(ErrorType::BuildDir("{:?} Error in creating build dir")),
     };
 
-    // TODO change behaviour in future
-    if build_dir.read_dir().unwrap().next().is_some() {
-        return Err(ErrorType::BuildDir("build dir is not empty"));
-    }
 
     let pages_components = match get_pages_components_list() {
         Ok(e) => e,
         Err(e) => return Err(e),
     };
+
+    println!("{:?}",pages_components);
 
     let pages = &pages_components.0;
     let mut used_components = vec![];
@@ -435,7 +446,7 @@ pub fn run() -> Result<(), ErrorType> {
         };
 
         match fs::write(
-            PathBuf::new().join(&build_dir).join(page_name),
+            PathBuf::new().join(&build_dir).join(format!("{}.html",page_name)),
             html.join("\n"),
         ) {
             Ok(_) => {}
