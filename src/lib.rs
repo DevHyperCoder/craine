@@ -80,13 +80,12 @@ fn is_component(filename: String) -> bool {
  * Returns a tuple of two vectors, (pages_vec,components_vec)
  * Reads all the files (no globbing) and uses `is_component()` to construct final vector
  * NOTE: Already assumes that the program's working directory is `work_dir`
- * TODO: Use work_dir instead of '.'
  */
-pub fn get_pages_components_list() -> Result<(Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
+pub fn get_pages_components_list(src_dir:&PathBuf) -> Result<(Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
 
-    let contents = match fs::read_dir(".") {
+    let contents = match fs::read_dir(src_dir) {
         Ok(contents) => contents,
         Err(_) => return Err(ErrorType::WorkDir("Can not read contents of directroy")),
     };
@@ -194,13 +193,13 @@ struct CraineHash {
 
 /// Creates a component hash map and returns (Node vector,HashMap of compoenent name and dom_tree)
 /// path: A path to a page/component to get the dom tree and compoenent hash of
-fn handler(path: &Path) -> Result<CraineHash, ErrorType> {
+fn handler(path: &Path,src_dir:&PathBuf) -> Result<CraineHash, ErrorType> {
     let mut hashmap = HashMap::new();
     let mut used_components: Vec<String> = vec![];
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    let imports = match parse_import(&mut contents) {
+    let imports = match parse_import(&mut contents,src_dir) {
         Ok(imports) => imports,
         Err(e) => return Err(e),
     };
@@ -212,7 +211,7 @@ fn handler(path: &Path) -> Result<CraineHash, ErrorType> {
         });
 
         //handle components
-        let returned_hash = match handler(&import) {
+        let returned_hash = match handler(&import,&src_dir) {
             Ok(hash) => hash,
             Err(e) => return Err(e),
         };
@@ -334,7 +333,7 @@ fn replace_dom(
  *
  * */
 // Currently muts the var
-fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
+fn parse_import(content: &mut Vec<String>,src_dir:&PathBuf) -> Result<Vec<PathBuf>, ErrorType> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
     let mut imports = vec![];
@@ -345,7 +344,7 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
         if let Some(captures) = regex.captures(&i) {
             let file_path = captures.get(1).map_or("", |m| m.as_str());
 
-            let path = fs::canonicalize(PathBuf::from(file_path)).unwrap();
+            let path = fs::canonicalize(PathBuf::new().join(src_dir).join(file_path)).unwrap();
             if !path.exists() {
                 return Err(ErrorType::Parse("Can not find file/directory"));
             }
@@ -375,12 +374,12 @@ fn parse_import(content: &mut Vec<String>) -> Result<Vec<PathBuf>, ErrorType> {
  *
  * */
 pub fn run() -> Result<(), ErrorType> {
-    let work_dir = match get_work_dir() {
+    let workspace_dir = match get_workspace_dir() {
         Some(work_dir) => work_dir,
         None => return Err(ErrorType::Parse("Expected dir got file")),
     };
 
-    if std::env::set_current_dir(&work_dir).is_err() {
+    if std::env::set_current_dir(&workspace_dir).is_err() {
         return Err(ErrorType::WorkDir("Unable to set current dir"));
     }
 
@@ -394,17 +393,13 @@ pub fn run() -> Result<(), ErrorType> {
         None => return Err(ErrorType::BuildDir("Unable to find build directory")),
     };
 
-        // clear the dir
-    match build_dir.read_dir(){
-        Ok(_)=>{
-
-           match  std::fs::remove_dir_all(&build_dir) {
-               Ok(_) => {},
-               Err(_) => return Err(ErrorType::BuildDir("Unable to remove build_dir")),
-
-           }
+    // clear the dir
+    match build_dir.read_dir() {
+        Ok(_) => match std::fs::remove_dir_all(&build_dir) {
+            Ok(_) => {}
+            Err(_) => return Err(ErrorType::BuildDir("Unable to remove build_dir")),
         },
-        _=>{}
+        _ => {}
     };
 
     match fs::create_dir_all(&build_dir) {
@@ -412,19 +407,23 @@ pub fn run() -> Result<(), ErrorType> {
         Err(_) => return Err(ErrorType::BuildDir("{:?} Error in creating build dir")),
     };
 
+    let src_dir = match get_src_dir(workspace_dir) {
+        None => return Err(ErrorType::Workspace("unable to get src dir")),
+        Some(a) => a,
+    };
 
-    let pages_components = match get_pages_components_list() {
+    let pages_components = match get_pages_components_list(&src_dir) {
         Ok(e) => e,
         Err(e) => return Err(e),
     };
 
-    println!("{:?}",pages_components);
+    println!("{:?}", pages_components);
 
     let pages = &pages_components.0;
     let mut used_components = vec![];
 
     for page in pages {
-        let page_hash = match handler(page) {
+        let page_hash = match handler(page,&src_dir) {
             Err(e) => return Err(e),
             Ok(hash) => hash,
         };
@@ -446,7 +445,9 @@ pub fn run() -> Result<(), ErrorType> {
         };
 
         match fs::write(
-            PathBuf::new().join(&build_dir).join(format!("{}.html",page_name)),
+            PathBuf::new()
+                .join(&build_dir)
+                .join(format!("{}.html", page_name)),
             html.join("\n"),
         ) {
             Ok(_) => {}

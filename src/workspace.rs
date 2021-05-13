@@ -16,6 +16,11 @@ pub struct WorkspaceConfig {
      * - build_dir: Directory to output final, compiled HTML
      */
     pub build_dir: Option<PathBuf>,
+
+    /**
+     * - src_dir: Directory containing the source html files 
+     */
+    pub src_dir: Option<PathBuf>,
 }
 
 impl WorkspaceConfig {
@@ -26,6 +31,7 @@ impl WorkspaceConfig {
     fn new() -> Self {
         WorkspaceConfig {
             build_dir: Some(PathBuf::new().join("./build")),
+            src_dir: Some(PathBuf::new().join("./src")),
         }
     }
 }
@@ -34,16 +40,27 @@ impl WorkspaceConfig {
  * Returns a <PathBuf> from the first argument given to program
  * NOTE: env[0] is the shell/program
  * */
-pub fn get_work_dir() -> Option<PathBuf> {
+pub fn get_workspace_dir() -> Option<PathBuf> {
     let i: Vec<String> = env::args().collect();
 
-    let work_dir = PathBuf::from(&i[1]);
+    let workspace_dir = PathBuf::from(&i[1]);
 
-    if !work_dir.is_dir() {
+    if !workspace_dir.is_dir() {
         return None;
     }
 
-    Some(work_dir)
+    Some(workspace_dir)
+}
+
+/**
+ * Returns a Option<PathBuf> of the source directory
+ */
+pub fn get_src_dir(workspace_dir: PathBuf) -> Option<PathBuf> {
+    let src_dir = PathBuf::new().join(workspace_dir).join("src/");
+    if !src_dir.exists() {
+        return None;
+    }
+    Some(src_dir)
 }
 
 /**
@@ -53,9 +70,9 @@ pub fn get_work_dir() -> Option<PathBuf> {
  * - .craine
  * - craine.json
  */
-pub fn get_workspace_config_path(work_dir: PathBuf) -> Option<PathBuf> {
-    let dot_craine = PathBuf::new().join(&work_dir).join(".craine");
-    let craine_json = PathBuf::new().join(&work_dir).join("craine.json");
+pub fn get_workspace_config_path(workspace_dir: PathBuf) -> Option<PathBuf> {
+    let dot_craine = PathBuf::new().join(&workspace_dir).join(".craine");
+    let craine_json = PathBuf::new().join(&workspace_dir).join("craine.json");
 
     if dot_craine.exists() {
         return Some(dot_craine);
@@ -71,8 +88,8 @@ pub fn get_workspace_config_path(work_dir: PathBuf) -> Option<PathBuf> {
  * Returns Result<WorkspaceConfig,ErrorType> of the workspace configuration
  * If there is no workspace config file, (via `get_workspace_config_path()`), a new WorkspaceConfig is returned.
  */
-pub fn get_workspace_config(work_dir: PathBuf) -> Result<WorkspaceConfig, ErrorType> {
-    let path = get_workspace_config_path(work_dir);
+pub fn get_workspace_config(workspace_dir: PathBuf) -> Result<WorkspaceConfig, ErrorType> {
+    let path = get_workspace_config_path(workspace_dir);
 
     match path {
         Some(path) => match serde_json::from_str(&fs::read_to_string(path).unwrap()) {
