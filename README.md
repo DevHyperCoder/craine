@@ -10,7 +10,7 @@ You **can** use javascript but it is **not required** to use craine
 ## Installation
 > Requires the rust compiler and cargo to be in path
 
-- Clone the repo
+- Clone the repo and `cd` into the directory
 - Run `cargo check` This compiles the program and informs it there are any errors. If any, please file a issue.
 - You can install it globally by `cargo install --path .`
 
