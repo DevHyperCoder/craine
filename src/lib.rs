@@ -77,13 +77,16 @@ fn is_component(filename: String) -> bool {
 }
 
 /**
- * Returns a tuple of two vectors, (pages_vec,components_vec)
+ * Returns a tuple of two vectors, (pages_vec,components_vec,assets_vec)
  * Reads all the files (no globbing) and uses `is_component()` to construct final vector
  * NOTE: Already assumes that the program's working directory is `work_dir`
  */
-pub fn get_pages_components_list(src_dir:&PathBuf) -> Result<(Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
+pub fn get_pages_components_assets_list(
+    src_dir: &PathBuf,
+) -> Result<(Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>), ErrorType> {
     let mut pages_vec = vec![];
     let mut components_vec = vec![];
+    let mut assets_vec = vec![];
 
     let contents = match fs::read_dir(src_dir) {
         Ok(contents) => contents,
@@ -92,6 +95,17 @@ pub fn get_pages_components_list(src_dir:&PathBuf) -> Result<(Vec<PathBuf>, Vec<
 
     for i in contents {
         let path = i.unwrap().path();
+        match path.extension() {
+            Some(ext) => {
+                println!("{:?} {:?}", ext, path);
+                if ext != "html" {
+                    let a = path.clone();
+                    assets_vec.push(a);
+                    continue;
+                }
+            }
+            None => {}
+        };
         match get_name(&path) {
             Some(filename) => {
                 if is_component(filename) {
@@ -106,7 +120,7 @@ pub fn get_pages_components_list(src_dir:&PathBuf) -> Result<(Vec<PathBuf>, Vec<
         }
     }
 
-    Ok((pages_vec, components_vec))
+    Ok((pages_vec, components_vec, assets_vec))
 }
 
 /**
@@ -193,13 +207,13 @@ struct CraineHash {
 
 /// Creates a component hash map and returns (Node vector,HashMap of compoenent name and dom_tree)
 /// path: A path to a page/component to get the dom tree and compoenent hash of
-fn handler(path: &Path,src_dir:&PathBuf) -> Result<CraineHash, ErrorType> {
+fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
     let mut hashmap = HashMap::new();
     let mut used_components: Vec<String> = vec![];
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    let imports = match parse_import(&mut contents,src_dir) {
+    let imports = match parse_import(&mut contents, src_dir) {
         Ok(imports) => imports,
         Err(e) => return Err(e),
     };
@@ -211,7 +225,7 @@ fn handler(path: &Path,src_dir:&PathBuf) -> Result<CraineHash, ErrorType> {
         });
 
         //handle components
-        let returned_hash = match handler(&import,&src_dir) {
+        let returned_hash = match handler(&import, &src_dir) {
             Ok(hash) => hash,
             Err(e) => return Err(e),
         };
@@ -333,7 +347,7 @@ fn replace_dom(
  *
  * */
 // Currently muts the var
-fn parse_import(content: &mut Vec<String>,src_dir:&PathBuf) -> Result<Vec<PathBuf>, ErrorType> {
+fn parse_import(content: &mut Vec<String>, src_dir: &PathBuf) -> Result<Vec<PathBuf>, ErrorType> {
     let regex = Regex::new("import\\s+(\\S+)").unwrap();
 
     let mut imports = vec![];
@@ -412,18 +426,18 @@ pub fn run() -> Result<(), ErrorType> {
         Some(a) => a,
     };
 
-    let pages_components = match get_pages_components_list(&src_dir) {
+    let pages_components_assets = match get_pages_components_assets_list(&src_dir) {
         Ok(e) => e,
         Err(e) => return Err(e),
     };
 
-    println!("{:?}", pages_components);
+    println!("{:?}", pages_components_assets);
 
-    let pages = &pages_components.0;
+    let pages = &pages_components_assets.0;
     let mut used_components = vec![];
 
     for page in pages {
-        let page_hash = match handler(page,&src_dir) {
+        let page_hash = match handler(page, &src_dir) {
             Err(e) => return Err(e),
             Ok(hash) => hash,
         };
@@ -455,10 +469,24 @@ pub fn run() -> Result<(), ErrorType> {
         };
     }
 
+    let assets = &pages_components_assets.2;
+    // Assets
+
+    for asset in assets {
+        let mut new = PathBuf::new()
+            .join(&build_dir)
+            .join(get_name(asset).unwrap());
+
+        add_extension(&mut new, asset.extension().unwrap());
+
+        println!("{:?}", new);
+        fs::copy(asset, new).unwrap();
+    }
+
     // Generate warnings
 
-    println!("{:?} {:?}", used_components, pages_components.1);
-    for i in pages_components.1 {
+    println!("{:?} {:?}", used_components, pages_components_assets.1);
+    for i in pages_components_assets.1 {
         //TODO error ; expect call
         if !(used_components.contains(&get_name(&i).expect("asd"))) {
             let path_str = i.to_str();
@@ -472,4 +500,16 @@ pub fn run() -> Result<(), ErrorType> {
     }
 
     Ok(())
+}
+
+fn add_extension(path: &mut std::path::PathBuf, extension: impl AsRef<std::path::Path>) {
+    match path.extension() {
+        Some(ext) => {
+            let mut ext = ext.to_os_string();
+            ext.push(".");
+            ext.push(extension.as_ref());
+            path.set_extension(ext)
+        }
+        None => path.set_extension(extension.as_ref()),
+    };
 }

@@ -18,7 +18,7 @@ pub struct WorkspaceConfig {
     pub build_dir: Option<PathBuf>,
 
     /**
-     * - src_dir: Directory containing the source html files 
+     * - src_dir: Directory containing the source html files
      */
     pub src_dir: Option<PathBuf>,
 }
