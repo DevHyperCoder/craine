@@ -67,7 +67,7 @@ pub fn get_name(path: &Path) -> Option<String> {
 /**
  * Returns true if the first character of the filename is a uppercase letter
  */
-fn is_component(filename: String) -> bool {
+pub fn is_component(filename: String) -> bool {
     let first_char = filename.chars().next();
 
     match first_char {
@@ -342,13 +342,13 @@ fn replace_dom(
 
 /**
  * Parses import statements and removes the statement from the given `content` vector
- * Uses `import\s+(\S+)` to get import statements.
+ * Uses `^import\s+(\S+)$` to get import statements.
  * Returns err if the file path of the import statement can not be found when making it abs path
  *
  * */
 // Currently muts the var
 fn parse_import(content: &mut Vec<String>, src_dir: &PathBuf) -> Result<Vec<PathBuf>, ErrorType> {
-    let regex = Regex::new("import\\s+(\\S+)").unwrap();
+    let regex = Regex::new("^import\\s+(\\S+)$").unwrap();
 
     let mut imports = vec![];
 
