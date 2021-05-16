@@ -1,5 +1,8 @@
 use craine::run;
 
 fn main() {
-    run().unwrap();
+    match run() {
+        Ok(_)=>{},
+        Err(e) => eprintln!("{}",e),
+    }
 }

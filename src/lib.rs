@@ -95,12 +95,20 @@ pub fn get_pages_components_assets_list(
 
     for i in contents {
         let path = i.unwrap().path();
+        let is_dir = path.is_dir();
+        if is_dir {
+            // TODO potential error
+            let mut pages_components_assets = get_pages_components_assets_list(&path).unwrap();
+            pages_vec.append(&mut pages_components_assets.0);
+            components_vec.append(&mut pages_components_assets.1);
+            assets_vec.append(&mut pages_components_assets.2);
+            continue;
+        }
         match path.extension() {
             Some(ext) => {
-                println!("{:?} {:?}", ext, path);
                 if ext != "html" {
-                    let a = path.clone();
-                    assets_vec.push(a);
+                    let asset_path = path.clone();
+                    assets_vec.push(asset_path);
                     continue;
                 }
             }
@@ -191,9 +199,7 @@ pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
                 output.push(text);
             }
 
-            Comment(_) => {
-                //println!("comment");
-            }
+            Comment(_) => {}
         }
     }
     output
@@ -213,7 +219,12 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    let imports = match parse_import(&mut contents, src_dir) {
+
+    let mut final_path:PathBuf = path.to_path_buf();
+
+    final_path.pop();
+
+    let imports = match parse_import(&mut contents, &final_path) {
         Ok(imports) => imports,
         Err(e) => return Err(e),
     };
@@ -241,6 +252,7 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
             used_components.push(key.to_string());
         }
     }
+
 
     let dom_tree = match Dom::parse(&contents.join("\n")) {
         Ok(tree) => tree,
@@ -342,13 +354,13 @@ fn replace_dom(
 
 /**
  * Parses import statements and removes the statement from the given `content` vector
- * Uses `import\s+(\S+)` to get import statements.
+ * Uses `^import\s+(\S+)$` to get import statements.
  * Returns err if the file path of the import statement can not be found when making it abs path
  *
  * */
 // Currently muts the var
-fn parse_import(content: &mut Vec<String>, src_dir: &PathBuf) -> Result<Vec<PathBuf>, ErrorType> {
-    let regex = Regex::new("import\\s+(\\S+)").unwrap();
+fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf>, ErrorType> {
+    let regex = Regex::new("^import\\s+(\\S+)$").unwrap();
 
     let mut imports = vec![];
 
@@ -357,8 +369,13 @@ fn parse_import(content: &mut Vec<String>, src_dir: &PathBuf) -> Result<Vec<Path
     for (index, i) in content.iter().enumerate() {
         if let Some(captures) = regex.captures(&i) {
             let file_path = captures.get(1).map_or("", |m| m.as_str());
+                
+            let mut ppath :PathBuf = PathBuf::from(src_dir);
 
-            let path = fs::canonicalize(PathBuf::new().join(src_dir).join(file_path)).unwrap();
+            ppath.push(file_path);
+
+            let path = ppath.canonicalize().unwrap();
+
             if !path.exists() {
                 return Err(ErrorType::Parse("Can not find file/directory"));
             }
@@ -426,12 +443,11 @@ pub fn run() -> Result<(), ErrorType> {
         Some(a) => a,
     };
 
-    let pages_components_assets = match get_pages_components_assets_list(&src_dir) {
+   let pages_components_assets = match get_pages_components_assets_list(&src_dir) {
         Ok(e) => e,
         Err(e) => return Err(e),
     };
 
-    println!("{:?}", pages_components_assets);
 
     let pages = &pages_components_assets.0;
     let mut used_components = vec![];
@@ -458,10 +474,14 @@ pub fn run() -> Result<(), ErrorType> {
             Some(page) => page,
         };
 
-        match fs::write(
-            PathBuf::new()
+            let pa = PathBuf::new()
                 .join(&build_dir)
-                .join(format!("{}.html", page_name)),
+                .join(format!("{}.html", page_name));
+
+        println!("Writing: {:?}",pa);
+
+        match fs::write(
+            pa,
             html.join("\n"),
         ) {
             Ok(_) => {}
@@ -479,13 +499,12 @@ pub fn run() -> Result<(), ErrorType> {
 
         add_extension(&mut new, asset.extension().unwrap());
 
-        println!("{:?}", new);
+        println!("Copying asset: {:?}", new);
         fs::copy(asset, new).unwrap();
     }
 
     // Generate warnings
 
-    println!("{:?} {:?}", used_components, pages_components_assets.1);
     for i in pages_components_assets.1 {
         //TODO error ; expect call
         if !(used_components.contains(&get_name(&i).expect("asd"))) {
@@ -495,7 +514,7 @@ pub fn run() -> Result<(), ErrorType> {
                 None => return Err(ErrorType::Parse("couldnt open dir")),
             };
 
-            println!("Unused: {}", path_str);
+            println!("Unused Component: {}", path_str);
         }
     }
 
