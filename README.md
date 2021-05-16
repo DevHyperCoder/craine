@@ -33,12 +33,12 @@ CRAINE uses the `import <path>` syntax to import other components. `<path>` can 
 
 ### First Project
 
-In a empty directory, create a page named `index.html`
+In a empty directory, create a "src" directory and inside that create a page named `index.html`
 
 `index.html`
 
 ```html
-import ./FancyButton.html
+import ./components/FancyButton.html
 
 <!DOCTYPE html>
 <html lang="en">
@@ -51,6 +51,8 @@ import ./FancyButton.html
 </body>
 </html>
 ```
+
+Now, create a components directory inside the source dir and then create the FancyButton.html file
 
 Notice how we used `<FancyButton />` like a tag in html ? that is how craine works in the background.
 
@@ -112,6 +114,11 @@ This would spit out the html into the terminal (ie, stdout). The example here sh
 </head>
 <body>
     <div>
+        <style>
+            .fancy {
+                background-color: "(color)"
+            }
+        </style>
         <button class="fancy"> I am a fancy button </button>
     </div>
 </body>
@@ -124,6 +131,7 @@ You would now be able to see that, `<FancyButton />` got replaced with a div enc
 
 CRAINE currently accepts a `.craine` or `craine.config` file for the following parameters:
 - `build_dir`: Sets the output directory.
+- `src_dir` : Sets the source directory.
 
 Config files are in json format.
 
