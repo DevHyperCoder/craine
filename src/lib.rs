@@ -106,7 +106,6 @@ pub fn get_pages_components_assets_list(
         }
         match path.extension() {
             Some(ext) => {
-                println!("{:?} {:?}", ext, path);
                 if ext != "html" {
                     let asset_path = path.clone();
                     assets_vec.push(asset_path);
@@ -129,7 +128,6 @@ pub fn get_pages_components_assets_list(
         }
     }
 
-    println!("im done btw");
     Ok((pages_vec, components_vec, assets_vec))
 }
 
@@ -201,9 +199,7 @@ pub fn dom_tree_to_html(dom_tree: Vec<html_parser::Node>) -> Vec<String> {
                 output.push(text);
             }
 
-            Comment(_) => {
-                //println!("comment");
-            }
+            Comment(_) => {}
         }
     }
     output
@@ -223,7 +219,6 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-    println!("{:?}",path.metadata());
 
     let mut final_path:PathBuf = path.to_path_buf();
 
@@ -258,7 +253,6 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
         }
     }
 
-    println!("TODO DONE WITH IMPORTS");
 
     let dom_tree = match Dom::parse(&contents.join("\n")) {
         Ok(tree) => tree,
@@ -355,7 +349,6 @@ fn replace_dom(
         }
     }
 
-    println!("TODO REPLACE DOM ALSO WORKS");
     new_dom_tree
 }
 
@@ -376,9 +369,6 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
     for (index, i) in content.iter().enumerate() {
         if let Some(captures) = regex.captures(&i) {
             let file_path = captures.get(1).map_or("", |m| m.as_str());
-
-            println!("PARSE IMPORT {:?}",file_path);
-            println!("SRC DIR {:?}",src_dir);
                 
             let mut ppath :PathBuf = PathBuf::from(src_dir);
 
@@ -386,7 +376,6 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
 
             let path = ppath.canonicalize().unwrap();
 
-            println!("CANOICALIZED: {:?}",path);
             if !path.exists() {
                 return Err(ErrorType::Parse("Can not find file/directory"));
             }
@@ -459,13 +448,11 @@ pub fn run() -> Result<(), ErrorType> {
         Err(e) => return Err(e),
     };
 
-    println!("{:?}", pages_components_assets);
 
     let pages = &pages_components_assets.0;
     let mut used_components = vec![];
 
     for page in pages {
-        println!("TODO PAGE LOOP");
         let page_hash = match handler(page, &src_dir) {
             Err(e) => return Err(e),
             Ok(hash) => hash,
@@ -480,18 +467,21 @@ pub fn run() -> Result<(), ErrorType> {
             &page_hash.component_hash,
             HashMap::new(),
         );
-        println!("TODO PAGE final dom called");
         let html = dom_tree_to_html(final_dom);
 
         let page_name = match get_name(page) {
             None => return Err(ErrorType::WorkDir("unable to get name")),
             Some(page) => page,
         };
-        println!("TODO PAGE writing");
-        match fs::write(
-            PathBuf::new()
+
+            let pa = PathBuf::new()
                 .join(&build_dir)
-                .join(format!("{}.html", page_name)),
+                .join(format!("{}.html", page_name));
+
+        println!("Writing: {:?}",pa);
+
+        match fs::write(
+            pa,
             html.join("\n"),
         ) {
             Ok(_) => {}
@@ -509,13 +499,12 @@ pub fn run() -> Result<(), ErrorType> {
 
         add_extension(&mut new, asset.extension().unwrap());
 
-        println!("{:?}", new);
+        println!("Copying asset: {:?}", new);
         fs::copy(asset, new).unwrap();
     }
 
     // Generate warnings
 
-    println!("{:?} {:?}", used_components, pages_components_assets.1);
     for i in pages_components_assets.1 {
         //TODO error ; expect call
         if !(used_components.contains(&get_name(&i).expect("asd"))) {
@@ -525,7 +514,7 @@ pub fn run() -> Result<(), ErrorType> {
                 None => return Err(ErrorType::Parse("couldnt open dir")),
             };
 
-            println!("Unused: {}", path_str);
+            println!("Unused Component: {}", path_str);
         }
     }
 
