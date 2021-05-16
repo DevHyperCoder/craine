@@ -13,6 +13,9 @@ pub mod workspace;
 /// Variable parsing module
 pub mod var_parser;
 
+/// Cmd opts
+pub mod cmd_params;
+
 use html_parser::Dom;
 use html_parser::Node::*;
 use regex::Regex;
@@ -405,10 +408,10 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
  *
  * */
 pub fn run() -> Result<(), ErrorType> {
-    let workspace_dir = match get_workspace_dir() {
-        Some(work_dir) => work_dir,
-        None => return Err(ErrorType::Parse("Expected dir got file")),
-    };
+    use cmd_params::Config;
+    use structopt::StructOpt;
+    let opts = Config::from_args();
+    let workspace_dir = opts.path;
 
     if std::env::set_current_dir(&workspace_dir).is_err() {
         return Err(ErrorType::WorkDir("Unable to set current dir"));
