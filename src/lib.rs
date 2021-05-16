@@ -222,8 +222,7 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
     let mut contents =
         read_file_to_lines(path.to_path_buf()).expect("Can not open file for reading");
 
-
-    let mut final_path:PathBuf = path.to_path_buf();
+    let mut final_path: PathBuf = path.to_path_buf();
 
     final_path.pop();
 
@@ -255,7 +254,6 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
             used_components.push(key.to_string());
         }
     }
-
 
     let dom_tree = match Dom::parse(&contents.join("\n")) {
         Ok(tree) => tree,
@@ -372,8 +370,8 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
     for (index, i) in content.iter().enumerate() {
         if let Some(captures) = regex.captures(&i) {
             let file_path = captures.get(1).map_or("", |m| m.as_str());
-                
-            let mut ppath :PathBuf = PathBuf::from(src_dir);
+
+            let mut ppath: PathBuf = PathBuf::from(src_dir);
 
             ppath.push(file_path);
 
@@ -407,12 +405,7 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
  * - Write the final dom_tree HTML to file
  *
  * */
-pub fn run() -> Result<(), ErrorType> {
-    use cmd_params::Config;
-    use structopt::StructOpt;
-    let opts = Config::from_args();
-    let workspace_dir = opts.path;
-
+pub fn craine_compile(workspace_dir: &PathBuf) -> Result<(), ErrorType> {
     if std::env::set_current_dir(&workspace_dir).is_err() {
         return Err(ErrorType::WorkDir("Unable to set current dir"));
     }
@@ -441,16 +434,15 @@ pub fn run() -> Result<(), ErrorType> {
         Err(_) => return Err(ErrorType::BuildDir("{:?} Error in creating build dir")),
     };
 
-    let src_dir = match get_src_dir(workspace_dir) {
+    let src_dir = match get_src_dir(workspace_dir.to_path_buf()) {
         None => return Err(ErrorType::Workspace("unable to get src dir")),
         Some(a) => a,
     };
 
-   let pages_components_assets = match get_pages_components_assets_list(&src_dir) {
+    let pages_components_assets = match get_pages_components_assets_list(&src_dir) {
         Ok(e) => e,
         Err(e) => return Err(e),
     };
-
 
     let pages = &pages_components_assets.0;
     let mut used_components = vec![];
@@ -477,16 +469,13 @@ pub fn run() -> Result<(), ErrorType> {
             Some(page) => page,
         };
 
-            let pa = PathBuf::new()
-                .join(&build_dir)
-                .join(format!("{}.html", page_name));
+        let pa = PathBuf::new()
+            .join(&build_dir)
+            .join(format!("{}.html", page_name));
 
-        println!("Writing: {:?}",pa);
+        println!("Writing: {:?}", pa);
 
-        match fs::write(
-            pa,
-            html.join("\n"),
-        ) {
+        match fs::write(pa, html.join("\n")) {
             Ok(_) => {}
             Err(_) => return Err(ErrorType::WorkDir("Unable to write file")),
         };
@@ -534,4 +523,47 @@ fn add_extension(path: &mut std::path::PathBuf, extension: impl AsRef<std::path:
         }
         None => path.set_extension(extension.as_ref()),
     };
+}
+
+/// Main program run loop. Made this way so auto compilation can be used with craine
+pub fn run() -> Result<(), ErrorType> {
+    use cmd_params::Config;
+    use structopt::StructOpt;
+    let opts = Config::from_args();
+    let workspace_dir = opts.path;
+
+    let is_autorun = opts.autorun;
+
+    if !is_autorun {
+        return craine_compile(&workspace_dir);
+    }
+
+    use notify::{watcher, RecursiveMode, Watcher};
+    use std::sync::mpsc::channel;
+    use std::time::Duration;
+    // Create a channel to receive the events.
+    let (tx, rx) = channel();
+
+    // Create a watcher object, delivering debounced events.
+    // The notification back-end is selected based on the platform.
+    let mut watcher = watcher(tx, Duration::from_secs(10)).unwrap();
+
+    // Add a path to be watched. All files and directories at that path and
+    // below will be monitored for changes.
+    watcher
+        .watch(&workspace_dir, RecursiveMode::Recursive)
+        .unwrap();
+
+    loop {
+        match rx.recv() {
+            Ok(event) => {
+                match craine_compile(&workspace_dir) {
+                    Ok(_) => {}
+                    Err(e) => eprintln!("{}", e),
+                };
+                println!("{:?}", event)
+            }
+            Err(e) => println!("watch error: {:?}", e),
+        }
+    }
 }
