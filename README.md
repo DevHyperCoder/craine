@@ -137,6 +137,14 @@ Config files are in json format.
 
 ### Command line options
 
+#### init
+
+Initializes a empty craine project
+- `--path` : Required ; Path to a empty directory to initialize a craine project.
+
+#### compiles
+
+Compiles a craine project
 - `--path` : Required ; Path to a craine workspace directory (ie, a directory containing a craine config file)
 - `--autorun` : Optional ; Automatically compiles when any file inside the src directory changes
 
