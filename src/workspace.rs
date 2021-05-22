@@ -27,7 +27,7 @@ impl WorkspaceConfig {
      * Returns a new WorkspaceConfig
      * - build_dir = "./build"
      */
-    fn new() -> Self {
+    pub fn new() -> Self {
         WorkspaceConfig {
             build_dir: Some(PathBuf::new().join("./build")),
             src_dir: Some(PathBuf::new().join("./src")),

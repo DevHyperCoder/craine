@@ -4,11 +4,28 @@ use structopt::StructOpt;
 /// HTML Compiler with react like components
 #[derive(StructOpt, Debug)]
 pub struct Config {
-    /// Path to a craine workspace
-    #[structopt(short, long)]
-    pub path: PathBuf,
+    /// Subcommand to execute
+    #[structopt(subcommand)]
+    pub cmd: Command,
+}
 
-    /// Auto compile or not
-    #[structopt(long)]
-    pub autorun: bool,
+/// Command list enum
+#[derive(StructOpt, Debug)]
+pub enum Command {
+    /// Compilation command
+    Compile {
+        /// Path to a craine workspace
+        #[structopt(short, long)]
+        path: PathBuf,
+
+        /// Auto compile or not
+        #[structopt(long)]
+        autorun: bool,
+    },
+    /// Initializes a new craine project in the given <path>
+    Init {
+        /// Path to a directory
+        #[structopt(short, long)]
+        path: PathBuf,
+    },
 }

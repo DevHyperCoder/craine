@@ -16,8 +16,8 @@ pub mod var_parser;
 /// Cmd opts
 pub mod cmd_params;
 
-use html_parser::Dom;
 use html_parser::Node::*;
+use html_parser::{Dom, Error};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -530,9 +530,47 @@ pub fn run() -> Result<(), ErrorType> {
     use cmd_params::Config;
     use structopt::StructOpt;
     let opts = Config::from_args();
-    let workspace_dir = opts.path;
+    let command = opts.cmd;
 
-    let is_autorun = opts.autorun;
+    use cmd_params::Command::*;
+    match command {
+        Init { path } => handle_init_args(path),
+        Compile { path, autorun } => handle_compilation_args(path, autorun),
+    }
+}
+
+fn handle_init_args(path: PathBuf) -> Result<(), ErrorType> {
+    if !path.exists() {
+        return Err(ErrorType::Workspace("given path does not exist"));
+    }
+
+    println!("Initializing a empty project in {:?}", path);
+
+    println!(
+        "Writing default configuration to {:?}",
+        path.join("craine.json")
+    );
+
+    let craine_json = serde_json::to_string(&WorkspaceConfig::new()).unwrap();
+    if let Err(_) = fs::create_dir(path.join("src")) {
+        return Err(ErrorType::Workspace("unable to create dir src"));
+    }
+
+    if let Err(_) = fs::write(path.join("craine.json"), craine_json) {
+        return Err(ErrorType::Workspace("unable to write craine.json"));
+    }
+
+    if let Err(_) = fs::File::create(path.join("src").join("index.html")) {
+        return Err(ErrorType::Workspace("cant create index.html"));
+    }
+
+    Ok(())
+}
+
+fn handle_compilation_args(path: PathBuf, autorun: bool) -> Result<(), ErrorType> {
+    let workspace_dir = path;
+
+    let is_autorun = autorun;
 
     if !is_autorun {
         return craine_compile(&workspace_dir);
