@@ -16,8 +16,8 @@ pub mod var_parser;
 /// Cmd opts
 pub mod cmd_params;
 
+use html_parser::Dom;
 use html_parser::Node::*;
-use html_parser::{Dom, Error};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -405,17 +405,11 @@ fn parse_import(content: &mut Vec<String>, src_dir: &Path) -> Result<Vec<PathBuf
  * - Write the final dom_tree HTML to file
  *
  * */
-pub fn craine_compile(workspace_dir: &PathBuf) -> Result<(), ErrorType> {
-    if std::env::set_current_dir(&workspace_dir).is_err() {
-        return Err(ErrorType::WorkDir("Unable to set current dir"));
-    }
-
-    let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {
-        Ok(workspace_config) => workspace_config,
-        Err(_) => return Err(ErrorType::Parse("Could not parse")),
-    };
-
-    let build_dir = match workspace_config.build_dir {
+pub fn craine_compile(
+    workspace_dir: &PathBuf,
+    workspace_config: &WorkspaceConfig,
+) -> Result<(), ErrorType> {
+    let build_dir = match &workspace_config.build_dir {
         Some(dir) => dir,
         None => return Err(ErrorType::BuildDir("Unable to find build directory")),
     };
@@ -570,10 +564,24 @@ fn handle_init_args(path: PathBuf) -> Result<(), ErrorType> {
 fn handle_compilation_args(path: PathBuf, autorun: bool) -> Result<(), ErrorType> {
     let workspace_dir = path;
 
+    if std::env::set_current_dir(&workspace_dir).is_err() {
+        return Err(ErrorType::WorkDir("Unable to set current dir"));
+    }
+
+    let workspace_config = match get_workspace_config(PathBuf::new().join(".")) {
+        Ok(workspace_config) => workspace_config,
+        Err(_) => return Err(ErrorType::Parse("Could not parse")),
+    };
+
+    let src_dir = match &workspace_config.src_dir {
+        Some(src_dir) => src_dir,
+        None => return Err(ErrorType::Parse("Could not get src dir")),
+    };
+
     let is_autorun = autorun;
 
     if !is_autorun {
-        return craine_compile(&workspace_dir);
+        return craine_compile(&workspace_dir, &workspace_config);
     }
 
     use notify::{watcher, RecursiveMode, Watcher};
@@ -588,14 +596,12 @@ fn handle_compilation_args(path: PathBuf, autorun: bool) -> Result<(), ErrorType
 
     // Add a path to be watched. All files and directories at that path and
     // below will be monitored for changes.
-    watcher
-        .watch(&workspace_dir, RecursiveMode::Recursive)
-        .unwrap();
+    watcher.watch(src_dir, RecursiveMode::Recursive).unwrap();
 
     loop {
         match rx.recv() {
             Ok(event) => {
-                match craine_compile(&workspace_dir) {
+                match craine_compile(&workspace_dir, &workspace_config) {
                     Ok(_) => {}
                     Err(e) => eprintln!("{}", e),
                 };
