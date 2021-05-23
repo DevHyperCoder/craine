@@ -130,11 +130,24 @@ You would now be able to see that, `<FancyButton />` got replaced with a div enc
 
 ### Configuration
 
-CRAINE currently accepts a `.craine` or `craine.config` file for the following parameters:
+CRAINE currently accepts a `.craine` or `craine.json` file for the following parameters:
 - `build_dir`: Sets the output directory.
 - `src_dir` : Sets the source directory.
 
 Config files are in json format.
+
+### Command line options
+
+#### init
+
+Initializes a empty craine project
+- `--path` : Required ; Path to a empty directory to initialize a craine project.
+
+#### compiles
+
+Compiles a craine project
+- `--path` : Required ; Path to a craine workspace directory (ie, a directory containing a craine config file)
+- `--autorun` : Optional ; Automatically compiles when any file inside the src directory changes
 
 ## LICENSE
 CRAINE is licensed under [GPL-3.0](./LICENSE)

@@ -1,7 +1,6 @@
-///adsfasdf
+/// Contains workspace utillity functions
 use super::error_handler::ErrorType;
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -28,28 +27,12 @@ impl WorkspaceConfig {
      * Returns a new WorkspaceConfig
      * - build_dir = "./build"
      */
-    fn new() -> Self {
+    pub fn new() -> Self {
         WorkspaceConfig {
             build_dir: Some(PathBuf::new().join("./build")),
             src_dir: Some(PathBuf::new().join("./src")),
         }
     }
-}
-
-/**
- * Returns a <PathBuf> from the first argument given to program
- * NOTE: env[0] is the shell/program
- * */
-pub fn get_workspace_dir() -> Option<PathBuf> {
-    let i: Vec<String> = env::args().collect();
-
-    let workspace_dir = PathBuf::from(&i[1]);
-
-    if !workspace_dir.is_dir() {
-        return None;
-    }
-
-    Some(workspace_dir)
 }
 
 /**
