@@ -257,7 +257,10 @@ fn handler(path: &Path, src_dir: &PathBuf) -> Result<CraineHash, ErrorType> {
 
     let dom_tree = match Dom::parse(&contents.join("\n")) {
         Ok(tree) => tree,
-        Err(_) => return Err(ErrorType::Parse("Unable to parse dom tree")),
+        Err(e) =>{
+            println!("{:#?}",e);
+            return Err(ErrorType::Parse("Unable to parse dom tree"))}
+
     };
 
     hashmap.insert(
@@ -479,9 +482,10 @@ pub fn craine_compile(
     // Assets
 
     for asset in assets {
+        println!("{:?}",asset);
         let mut new = PathBuf::new()
             .join(&build_dir)
-            .join(get_name(asset).unwrap());
+            .join(get_relative_to_src(workspace_config.src_dir.as_ref().unwrap(),&asset).unwrap());
 
         add_extension(&mut new, asset.extension().unwrap());
 
@@ -610,4 +614,9 @@ fn handle_compilation_args(path: PathBuf, autorun: bool) -> Result<(), ErrorType
             Err(e) => println!("watch error: {:?}", e),
         }
     }
+}
+
+fn get_relative_to_src(src_dir:&PathBuf,asset: &PathBuf) -> Result<PathBuf,ErrorType>{
+    println!("{:?}",asset.parent());
+    Ok(asset.to_owned())
 }
